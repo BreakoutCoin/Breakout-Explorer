@@ -62,9 +62,9 @@ app.use('/ext/getaddress/:hash', function(req,res){
     if (address) {
       var a_ext = {
         address: address.a_id,
-        sent: (address.sent / 100000000),
-        received: (address.received / 100000000),
-        balance: (address.balance / 100000000).toString().replace(/(^-+)/mg, ''),
+        sent: (address.sent / settings.toshis),
+        received: (address.received / settings.toshis),
+        balance: (address.balance / settings.toshis).toString().replace(/(^-+)/mg, ''),
         last_txs: address.txs,
       };
       res.send(a_ext);
@@ -77,7 +77,7 @@ app.use('/ext/getaddress/:hash', function(req,res){
 app.use('/ext/getbalance/:hash', function(req,res){
   db.get_address(req.param('hash'), function(address){
     if (address) {
-      res.send((address.balance / 100000000).toString().replace(/(^-+)/mg, ''));
+      res.send((address.balance / settings.toshis).toString().replace(/(^-+)/mg, ''));
     } else {
       res.send({ error: 'address not found.', hash: req.param('hash')})
     }
@@ -95,7 +95,7 @@ app.use('/ext/getdistribution', function(req,res){
 });
 
 app.use('/ext/getlasttxs/:min', function(req,res){
-  db.get_last_txs(settings.index.last_txs, (req.params.min * 100000000), function(txs){
+  db.get_last_txs(settings.index.last_txs, (req.params.min * settings.toshis), function(txs){
     res.send({data: txs});
   });
 });

@@ -50,13 +50,13 @@ function route_get_tx(res, txid) {
           if (rtx.txid) {
             lib.prepare_vin(rtx, function(vin) {
               lib.prepare_vout(rtx.vout, rtx.txid, vin, function(rvout, rvin) {
-                lib.calculate_total(rvout, function(total){
+                lib.calculate_totals(rvout, function(totals){
                   if (!rtx.confirmations > 0) {
                     var utx = {
                       txid: rtx.txid,
                       vin: rvin,
                       vout: rvout,
-                      total: total.toFixed(8),
+                      totals: totals,
                       timestamp: rtx.time,
                       blockhash: '-',
                       blockindex: -1,
@@ -67,7 +67,7 @@ function route_get_tx(res, txid) {
                       txid: rtx.txid,
                       vin: rvin,
                       vout: rvout,
-                      total: total.toFixed(8),
+                      totals: totals,
                       timestamp: rtx.time,
                       blockhash: rtx.blockhash,
                       blockindex: rtx.blockheight,
