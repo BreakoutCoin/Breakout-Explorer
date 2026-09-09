@@ -18,10 +18,36 @@ var express = require('express')
 var app = express();
 
 // bitcoinapi
+//
+// SECURITY: bitcoin-node-api is a blind passthrough. Its route is app.get('*'),
+// which takes whatever method name appears in the path and hands it straight to
+// the wallet as an RPC command -- there is no table of supported methods. The
+// setAccess('only', [...]) list below is therefore the ONLY thing standing
+// between the public internet and the full RPC surface of a wallet we have just
+// given credentials to via setWalletDetails(). Add read-only calls here, never
+// anything that can move coins or read keys.
+//
+// Note also that the passthrough forwards query parameters POSITIONALLY, in the
+// order they appear in the URL, ignoring their names. So getrichlist wants
+// ?color=57&start=1&max=100 in exactly that order; naming them differently or
+// reordering them silently changes which RPC argument each one becomes.
+
+// Breakout Explore API: read-only address, rich list and card queries, served
+// by breakoutd when it runs with exploreapi=1. Same data explore.brk.zone
+// already serves publicly. Shared by both branches below so that turning on
+// 'heavy' cannot silently drop them.
+var explore_api_methods = [
+  'getaddressinfo', 'getaddressbalance',
+  'getaddressinoutspg', 'getaddressutxospg', 'getaddresstxspg',
+  'getrichlist', 'getrichlistpg', 'getrichlistsize',
+  'getcardinfo'
+];
+
 bitcoinapi.setWalletDetails(settings.wallet);
 if (settings.heavy != true) {
   bitcoinapi.setAccess('only', ['getinfo', 'getnetworkhashps', 'getmininginfo','getdifficulty', 'getconnectioncount',
-    'getblockcount', 'getblockhash', 'getblock', 'getrawtransaction', 'getpeerinfo', 'gettxoutsetinfo']);
+    'getblockcount', 'getblockhash', 'getblock', 'getrawtransaction', 'getpeerinfo', 'gettxoutsetinfo'
+    ].concat(explore_api_methods));
 } else {
   // enable additional heavy api calls
   /*
@@ -38,7 +64,8 @@ if (settings.heavy != true) {
   bitcoinapi.setAccess('only', ['getinfo', 'getstakinginfo', 'getnetworkhashps', 'getdifficulty', 'getconnectioncount',
     'getblockcount', 'getblockhash', 'getblock', 'getrawtransaction','getmaxmoney', 'getvote',
     'getmaxvote', 'getphase', 'getreward', 'getnextrewardestimate', 'getnextrewardwhenstr',
-    'getnextrewardwhensec', 'getsupply', 'gettxoutsetinfo']);
+    'getnextrewardwhensec', 'getsupply', 'gettxoutsetinfo'
+    ].concat(explore_api_methods));
 }
 // view engine setup
 app.set('views', path.join(__dirname, 'views'));
