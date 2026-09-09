@@ -23,7 +23,12 @@ mongoose.connect(dbString, function(err) {
     console.log('Aborting');
     exit();
   } else {
-    request({uri: 'http://127.0.0.1:' + settings.port + '/api/getpeerinfo', json: true}, function (error, response, body) {
+    var api = 'http://' + (process.env.EXPLORER_API_HOST || '127.0.0.1') + ':' + settings.port + '/api/getpeerinfo';
+    request({uri: api, json: true}, function (error, response, body) {
+      if (error || !Array.isArray(body)) {
+        console.log('[peers] getpeerinfo unavailable; skipping peer refresh');
+        return exit();
+      }
       lib.syncLoop(body.length, function (loop) {
         var i = loop.iteration();
         var address = body[i].addr.split(':')[0];
@@ -32,15 +37,14 @@ mongoose.connect(dbString, function(err) {
             // peer already exists
             loop.next();
           } else {
-            request({uri: 'http://freegeoip.net/json/' + address, json: true}, function (error, response, geo) {
-              db.create_peer({
-                address: address,
-                protocol: body[i].version,
-                version: body[i].subver.replace('/', '').replace('/', ''),
-                country: geo.country_name
-              }, function(){
-                loop.next();
-              });
+            // freegeoip.net is defunct; store the peer without geolocation
+            db.create_peer({
+              address: address,
+              protocol: body[i].version,
+              version: body[i].subver.replace('/', '').replace('/', ''),
+              country: ''
+            }, function(){
+              loop.next();
             });
           }
         });

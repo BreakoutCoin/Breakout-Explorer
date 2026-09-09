@@ -1,0 +1,467 @@
+/* ============================================================
+   The Deck — Explorer skin
+   Dark CRT / terminal reskin matching thedeck.rocks
+   Loaded AFTER Bootstrap (Slate) + style.css so it wins the cascade.
+   Pure visual override layer — no markup or logic changes.
+   ============================================================ */
+
+/* ---------- self-hosted fonts (no external requests) ---------- */
+@font-face {
+  font-family: 'VT323';
+  font-style: normal; font-weight: 400; font-display: swap;
+  src: url('/fonts/vt323-regular.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal; font-weight: 100 900; font-display: swap;
+  src: url('/fonts/jetbrains-mono-var.woff2') format('woff2-variations'),
+       url('/fonts/jetbrains-mono-var.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Silkscreen';
+  font-style: normal; font-weight: 400; font-display: swap;
+  src: url('/fonts/silkscreen-regular.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Silkscreen';
+  font-style: normal; font-weight: 700; font-display: swap;
+  src: url('/fonts/silkscreen-bold.woff2') format('woff2');
+}
+
+/* ---------- design tokens (dark only) ---------- */
+:root {
+  --bg:            #0a0b0d;
+  --bg-1:          #14161b;
+  --bg-2:          #1d2027;
+  --bg-3:          #262932;
+  --border:        #2a2e38;
+  --border-bright: #3d4150;
+  --text:          #e8e0c8;   /* warm bone */
+  --text-muted:    #8a8674;
+  --text-dim:      #5b5a52;
+  --phosphor:      #5cdf6a;   /* CRT green */
+  --amber:         #f3a83b;   /* archival amber */
+  --magenta:       #e94f7e;   /* rare highlight */
+  --blue:          #6ab8ff;
+
+  --font-display: 'VT323', 'Courier New', monospace;
+  --font-body:    'JetBrains Mono', 'Menlo', 'Consolas', monospace;
+  --font-pixel:   'Silkscreen', 'VT323', monospace;
+}
+
+/* ---------- base ---------- */
+html, body {
+  background: var(--bg) !important;
+  color: var(--text) !important;
+  font-family: var(--font-body) !important;
+  font-size: 14px;
+  letter-spacing: .2px;
+  -webkit-font-smoothing: antialiased;
+}
+body {
+  /* faint CRT scanline texture */
+  background-image:
+    repeating-linear-gradient(
+      to bottom,
+      rgba(255,255,255,0.012) 0px,
+      rgba(255,255,255,0.012) 1px,
+      transparent 1px,
+      transparent 3px
+    ) !important;
+}
+a, a:link {
+  color: var(--phosphor);
+  text-decoration: none;
+  transition: color .15s ease, text-shadow .15s ease;
+}
+a:hover, a:focus {
+  color: var(--phosphor);
+  text-shadow: 0 0 8px rgba(92,223,106,.55);
+  text-decoration: none;
+}
+
+/* ---------- focus rings ----------
+   Kill the browser's default blue focus ring on every interactive element
+   (it clashes with the CRT theme), but keep an on-theme phosphor outline for
+   keyboard users via :focus-visible so accessibility isn't lost. Custom
+   themed focus styles elsewhere (search box glow, button states) use
+   box-shadow, which this does not touch. */
+a:focus,
+button:focus,
+input:focus,
+select:focus,
+textarea:focus,
+.btn:focus,
+.form-control:focus,
+.navbar-toggle:focus,
+.nav-tabs > li > a:focus,
+.dataTables_wrapper .dataTables_paginate .paginate_button:focus,
+.dataTables_filter input:focus,
+.dataTables_length select:focus,
+.pagination > li > a:focus {
+  outline: none !important;
+}
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+.btn:focus-visible,
+.nav-tabs > li > a:focus-visible,
+.dataTables_wrapper .dataTables_paginate .paginate_button:focus-visible {
+  outline: 1px solid var(--phosphor) !important;
+  outline-offset: 1px;
+}
+::selection { background: rgba(92,223,106,.30); color: var(--text); }
+hr { border-color: var(--border); }
+strong, b { color: var(--text); }
+.text-muted { color: var(--text-muted) !important; }
+center > div, .text-center i { color: var(--text-muted); }
+
+/* ---------- top + bottom navbars ---------- */
+.navbar.navbar-default,
+.navbar.navbar-fixed-top,
+.navbar.navbar-fixed-bottom {
+  background: var(--bg-1) !important;
+  background-image: none !important;
+  border: none !important;
+  border-bottom: 1px solid var(--border) !important;
+  box-shadow: 0 1px 0 rgba(0,0,0,.6);
+}
+.navbar.navbar-fixed-bottom {
+  border-bottom: none !important;
+  border-top: 1px solid var(--border) !important;
+}
+.navbar-default .navbar-brand {
+  font-family: var(--font-display) !important;
+  font-size: 30px !important;
+  line-height: 1 !important;
+  padding-top: 14px;
+  letter-spacing: 1px;
+  color: var(--phosphor) !important;
+  text-shadow: 0 0 10px rgba(92,223,106,.40);
+}
+.navbar-default .navbar-brand:hover { color: var(--phosphor) !important; }
+.navbar-default .navbar-nav > li > a,
+.navbar-default .navbar-link {
+  color: var(--text-muted) !important;
+  font-family: var(--font-pixel) !important;
+  font-size: 10px !important;
+  text-transform: uppercase;
+  letter-spacing: .5px;
+  background: transparent !important;
+}
+.navbar-default .navbar-nav > li > a:hover,
+.navbar-default .navbar-link:hover {
+  color: var(--text) !important;
+}
+.navbar-default .navbar-nav > .active > a,
+.navbar-default .navbar-nav > .active > a:hover,
+.navbar-default .navbar-nav > .active > a:focus {
+  color: var(--phosphor) !important;
+  background: var(--bg-2) !important;
+  box-shadow: inset 0 -2px 0 var(--phosphor);
+}
+/* remove the default blue focus ring on nav links; keyboard users still get a
+   subtle phosphor outline via :focus-visible */
+.navbar-default .navbar-nav > li > a:focus,
+.navbar-default .navbar-link:focus {
+  outline: none !important;
+  color: var(--text) !important;
+}
+.navbar-default .navbar-nav > li > a:focus-visible,
+.navbar-default .navbar-link:focus-visible {
+  outline: 1px solid var(--phosphor) !important;
+  outline-offset: -2px;
+}
+.menu-text { font-family: var(--font-pixel) !important; }
+.navbar-toggle { border-color: var(--border) !important; }
+.navbar-toggle .icon-bar { background: var(--text-muted) !important; }
+
+/* ---------- panels (the main building block) ---------- */
+.panel,
+.panel-default {
+  background: var(--bg-1) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 3px !important;
+  box-shadow: 0 1px 2px rgba(0,0,0,.4) !important;
+}
+.panel-heading,
+.panel-default > .panel-heading {
+  background: var(--bg-2) !important;
+  background-image: none !important;
+  border-bottom: 1px solid var(--border) !important;
+  color: var(--text) !important;
+  border-radius: 3px 3px 0 0 !important;
+}
+.panel-heading strong,
+.panel-title {
+  font-family: var(--font-display) !important;
+  font-size: 19px !important;
+  font-weight: 400 !important;
+  letter-spacing: .5px;
+  color: var(--text) !important;
+}
+.panel-body { color: var(--text) !important; }
+
+/* stat panels on the header (network / difficulty / supply / price) */
+.row.text-center .panel-heading strong {
+  font-family: var(--font-pixel) !important;
+  font-size: 9px !important;
+  text-transform: uppercase;
+  letter-spacing: .5px;
+  color: var(--text-muted) !important;
+}
+.row.text-center .panel-body label,
+.row.text-center .panel-body {
+  font-family: var(--font-display) !important;
+  font-size: 24px !important;
+  color: var(--phosphor) !important;
+  text-shadow: 0 0 8px rgba(92,223,106,.30);
+  margin: 0;
+}
+
+/* ---------- search ---------- */
+#index-search .form-control,
+.nav-search input,
+.form-control {
+  background: var(--bg) !important;
+  border: 1px solid var(--border-bright) !important;
+  color: var(--text) !important;
+  border-radius: 3px !important;
+  font-family: var(--font-body) !important;
+  box-shadow: inset 0 1px 2px rgba(0,0,0,.5) !important;
+}
+.form-control::placeholder { color: var(--text-dim) !important; }
+.form-control:focus {
+  border-color: var(--phosphor) !important;
+  box-shadow: 0 0 0 2px rgba(92,223,106,.20), inset 0 1px 2px rgba(0,0,0,.5) !important;
+}
+
+/* ---------- buttons ---------- */
+.btn {
+  font-family: var(--font-pixel) !important;
+  font-size: 11px !important;
+  text-transform: uppercase;
+  letter-spacing: .5px;
+  border-radius: 3px !important;
+  background-image: none !important;
+}
+.btn-success,
+.btn-success:focus {
+  background: var(--phosphor) !important;
+  border-color: var(--phosphor) !important;
+  color: var(--bg) !important;
+}
+.btn-success:hover {
+  background: #74e981 !important;
+  border-color: #74e981 !important;
+  color: var(--bg) !important;
+  box-shadow: 0 0 12px rgba(92,223,106,.45);
+}
+.btn-default {
+  background: var(--bg-2) !important;
+  border-color: var(--border-bright) !important;
+  color: var(--text) !important;
+}
+
+/* ---------- tables ---------- */
+.table { color: var(--text) !important; background: transparent !important; }
+.table > thead > tr > th {
+  font-family: var(--font-pixel) !important;
+  font-size: 9px !important;
+  text-transform: uppercase;
+  letter-spacing: .5px;
+  color: var(--text-muted) !important;
+  border-bottom: 1px solid var(--border-bright) !important;
+  border-color: var(--border) !important;
+  background: var(--bg-2) !important;
+  vertical-align: middle;
+}
+.table > tbody > tr > td,
+.table > tbody > tr > th {
+  border-top: 1px solid var(--border) !important;
+  color: var(--text) !important;
+  vertical-align: middle;
+}
+.table-bordered,
+.table-bordered > thead > tr > th,
+.table-bordered > tbody > tr > td,
+.table-bordered > tbody > tr > th {
+  border-color: var(--border) !important;
+}
+.table-striped > tbody > tr:nth-of-type(odd) {
+  background: rgba(255,255,255,0.018) !important;
+}
+.table-hover > tbody > tr:hover {
+  background: rgba(92,223,106,0.06) !important;
+}
+.table a:not(.btn) { color: var(--phosphor) !important; }
+.well {
+  background: var(--bg) !important;
+  border: 1px solid var(--border) !important;
+  color: var(--text-muted) !important;
+  border-radius: 3px !important;
+  box-shadow: inset 0 1px 2px rgba(0,0,0,.5) !important;
+  font-size: 12px;
+}
+
+/* ---------- contextual row / cell states ---------- */
+/* confirmed / received -> phosphor */
+.table > tbody > tr.success > td,
+.table > tbody > tr > td.success,
+tr.success > td, td.success {
+  background: rgba(92,223,106,0.10) !important;
+  color: var(--phosphor) !important;
+  box-shadow: inset 3px 0 0 var(--phosphor);
+}
+/* low confirmations / sent -> magenta */
+.table > tbody > tr.danger > td,
+.table > tbody > tr > td.danger,
+tr.danger > td, td.danger {
+  background: rgba(233,79,126,0.10) !important;
+  color: var(--magenta) !important;
+  box-shadow: inset 3px 0 0 var(--magenta);
+}
+/* mid confirmations -> amber */
+.table > tbody > tr.warning > td,
+.table > tbody > tr > td.warning,
+tr.warning > td, td.warning {
+  background: rgba(243,168,59,0.10) !important;
+  color: var(--amber) !important;
+  box-shadow: inset 3px 0 0 var(--amber);
+}
+/* info -> blue */
+.table > tbody > tr.info > td,
+.table > tbody > tr > td.info,
+tr.info > td, td.info {
+  background: rgba(106,184,255,0.10) !important;
+  color: var(--blue) !important;
+}
+
+/* ---------- labels / badges ---------- */
+.label {
+  font-family: var(--font-pixel) !important;
+  font-size: 9px !important;
+  font-weight: 400 !important;
+  letter-spacing: .5px;
+  border-radius: 2px !important;
+  padding: .25em .5em !important;
+}
+.label-default {
+  background: var(--bg-3) !important;
+  color: var(--text) !important;
+  border: 1px solid var(--border-bright);
+}
+.label-success { background: var(--phosphor) !important; color: var(--bg) !important; }
+.label-warning { background: var(--amber) !important; color: var(--bg) !important; }
+.label-danger  { background: var(--magenta) !important; color: var(--bg) !important; }
+.label-info    { background: var(--blue) !important; color: var(--bg) !important; }
+.label a, .label a:link, .label a:visited, .label a:hover { color: inherit !important; }
+.connections .label { font-size: 9px !important; }
+
+/* ---------- alerts ---------- */
+.alert {
+  border-radius: 3px !important;
+  border-width: 1px !important;
+  font-family: var(--font-body) !important;
+  background-image: none !important;
+}
+.alert-info {
+  background: rgba(106,184,255,0.10) !important;
+  border-color: rgba(106,184,255,0.40) !important;
+  color: var(--blue) !important;
+}
+.alert-warning {
+  background: rgba(243,168,59,0.10) !important;
+  border-color: rgba(243,168,59,0.40) !important;
+  color: var(--amber) !important;
+}
+.alert-danger {
+  background: rgba(233,79,126,0.10) !important;
+  border-color: rgba(233,79,126,0.40) !important;
+  color: var(--magenta) !important;
+}
+.alert strong { color: inherit !important; }
+
+/* ---------- tabs (richlist) ---------- */
+.nav-tabs { border-bottom: 1px solid var(--border) !important; }
+.nav-tabs > li > a {
+  font-family: var(--font-pixel) !important;
+  font-size: 10px !important;
+  text-transform: uppercase;
+  color: var(--text-muted) !important;
+  border-radius: 3px 3px 0 0 !important;
+  border: 1px solid transparent !important;
+  background: transparent !important;
+}
+.nav-tabs > li > a:hover { background: var(--bg-2) !important; border-color: var(--border) !important; }
+.nav-tabs > li.active > a,
+.nav-tabs > li.active > a:hover,
+.nav-tabs > li.active > a:focus {
+  background: var(--bg-1) !important;
+  color: var(--phosphor) !important;
+  border-color: var(--border) var(--border) transparent !important;
+}
+
+/* ---------- DataTables chrome ---------- */
+.dataTables_wrapper .dataTables_length,
+.dataTables_wrapper .dataTables_filter,
+.dataTables_wrapper .dataTables_info,
+.dataTables_wrapper .dataTables_processing,
+.dataTables_wrapper .dataTables_paginate {
+  color: var(--text-muted) !important;
+  font-family: var(--font-body) !important;
+  font-size: 12px;
+}
+.dataTables_wrapper .dataTables_paginate .paginate_button {
+  color: var(--text-muted) !important;
+  border: 1px solid var(--border) !important;
+  background: var(--bg-2) !important;
+  border-radius: 3px !important;
+}
+.dataTables_wrapper .dataTables_paginate .paginate_button.current,
+.dataTables_wrapper .dataTables_paginate .paginate_button.current:hover {
+  background: var(--phosphor) !important;
+  color: var(--bg) !important;
+  border-color: var(--phosphor) !important;
+}
+.dataTables_wrapper .dataTables_paginate .paginate_button:hover {
+  background: var(--bg-3) !important;
+  color: var(--text) !important;
+}
+.dataTables_filter input,
+.dataTables_length select {
+  background: var(--bg) !important;
+  border: 1px solid var(--border-bright) !important;
+  color: var(--text) !important;
+  border-radius: 3px;
+}
+
+/* ---------- icons / misc ---------- */
+.iquidus { color: var(--text-muted) !important; }
+.glyphicon-info-sign, .fa { color: var(--text-muted); }
+.view_tx a .glyphicon { color: var(--phosphor) !important; }
+.qrcode {
+  border: 4px solid var(--bg-1);
+  border-radius: 3px;
+  background: #fff;
+}
+.footer-padding { height: 60px; }
+
+/* powered-by + footer text */
+.navbar-fixed-bottom .navbar-link,
+.navbar-fixed-bottom p,
+.navbar-fixed-bottom a {
+  font-family: var(--font-pixel) !important;
+  font-size: 9px !important;
+  text-transform: uppercase;
+  color: var(--text-muted) !important;   /* AA contrast on dark footer */
+}
+.navbar-fixed-bottom a:hover { color: var(--text) !important; }
+
+/* ---------- responsive ---------- */
+@media (max-width: 767px) {
+  body { padding-top: 56px; }
+  .navbar-default .navbar-brand { font-size: 24px !important; }
+}

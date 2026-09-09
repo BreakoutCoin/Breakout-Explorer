@@ -27,6 +27,10 @@ node_modules
 settings.json
 .idea
 *~
-*.ico
-*.png
+
+# NOTE: this file used to ignore *.png and *.ico. Those rules never had any
+# effect on the branding they were presumably meant to keep out of the repo --
+# public/images/logo.png and public/favicon.ico have always been tracked, and
+# tracking beats ignoring. All they actually did was silently drop newly added
+# artwork (the card images, the coin icons) from commits. Removed.
 

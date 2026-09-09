@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Breakout Explorer</title>
+    <link rel="stylesheet" href="/themes/Slate/bootstrap.min.css">
+    <link rel="stylesheet" href="/vendor/jqplot/jquery.jqplot.css">
+    <link rel="stylesheet" href="//cdn.datatables.net/plug-ins/725b2a2115b/integration/bootstrap/3/dataTables.bootstrap.css">
+    <link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/font-awesome/4.3.0/css/font-awesome.min.css">
+    <link rel="stylesheet" href="/stylesheets/style.css">
+    <link rel="stylesheet" href="/stylesheets/deck.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+    <script src="//netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+    <script src="/vendor/jqplot/jquery.jqplot.min.js"></script>
+    <script src="/vendor/jqplot/plugins/jqplot.dateAxisRenderer.min.js"></script>
+    <script src="/vendor/jqplot/plugins/jqplot.ohlcRenderer.min.js"></script>
+    <script src="/vendor/jqplot/plugins/jqplot.highlighter.min.js"></script>
+    <script src="/vendor/jqplot/plugins/jqplot.pieRenderer.min.js"></script>
+    <script src="/vendor/jqplot/plugins/jqplot.barRenderer.min.js"></script>
+    <script src="/vendor/jqplot/plugins/jqplot.categoryAxisRenderer.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.9.0/moment.min.js"></script>
+    <script src="//cdn.datatables.net/1.10.2/js/jquery.dataTables.min.js"> </script>
+    <script src="//cdn.datatables.net/responsive/1.0.1/js/dataTables.responsive.js"></script>
+    <script src="//cdn.datatables.net/plug-ins/725b2a2115b/integration/bootstrap/3/dataTables.bootstrap.js"></script>
+    <script src="/javascripts/chart.js"></script>
+    <script>
+      $(document).ready(function(){
+        $('#').addClass('active');
+        function update_stats(){   
+          $.ajax({url: '/ext/summary', success: function(json){
+            $("#supply").text(json.data[0].supply);
+            $("#difficulty").text(json.data[0].difficulty);
+            $("#difficultyHybrid").text(json.data[0].difficultyHybrid);
+            $("#hashrate").text(json.data[0].hashrate);
+            $("#lastPrice").text(json.data[0].lastPrice.toFixed(8));
+            $("#lblConnections").text(json.data[0].connections + ' connections');
+            $("#lblBlockcount").text(json.data[0].blockcount + ' blocks');
+            $("#lblX1").text(' ');
+          }});
+        }
+        $('.block-last-next').tooltip({
+          animation: true,
+          delay: { hide: 500 },   
+        });
+        $('.history-table').dataTable( {        
+          searching: false,
+          ordering: false,
+          responsive: true
+        });
+        $('.iquidus').css('color',$('.table').css('color'));
+        $(window).resize(function () { 
+          $($.fn.dataTable.tables( true ) ).DataTable().columns.adjust();
+        });
+        setInterval( function() {
+          update_stats();
+        }, 60000);
+        update_stats();
+      });
+    </script>
+  </head>
+  <body>
+    <div role="navigation" class="nav navbar navbar-default navbar-fixed-top">
+      <div class="container-fluid">
+        <div class="navbar-header">
+          <button type="button" data-toggle="collapse" data-target="#navbar-collapse" class="navbar-toggle"><span class="sr-only">Toggle navigation</span><span class="icon-bar"></span><span class="icon-bar"></span><span class="icon-bar"></span></button><a href="/" class="navbar-brand">Breakout Explorer</a>
+        </div>
+        <div id="navbar-collapse" class="collapse navbar-collapse">
+          <ul class="nav navbar-nav">
+            <li id="home"><a href="/" class="navbar-link"> <span class="glyphicon glyphicon-search"></span><span class="menu-text">Explorer</span></a></li>
+            <li id="movement"> <a href="/movement" class="navbar-link loading"> <span class="fa fa-money"></span><span class="menu-text">Movement</span></a></li>
+            <li id="network"><a href="/network" class="navbar-link"><span class="fa fa-share-alt"></span><span class="menu-text">Network</span></a></li>
+            <li id="richlist"><a href="/richlist" class="navbar-link"><span class="fa fa-btc"></span><span class="menu-text">Top 100</span></a></li>
+            <li id="info"><a href="/info" class="navbar-link"><span class="glyphicon glyphicon-info-sign"></span><span class="menu-text">API</span></a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-12">
+      <div class="row text-center">
+        <div class="col-md-2 col-md-offset-1">
+          <div class="panel panel-default hidden-sm hidden-xs">
+            <div class="panel-heading"><strong>Network (MH/s)</strong>
+            </div>
+            <div class="panel-body">
+              <label id="hashrate">- </label><br>
+              <label id="lblX1"> </label>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-2">
+          <div class="panel panel-default hidden-sm hidden-xs">
+            <div class="panel-heading"><strong>Difficulty</strong></div>
+            <div class="panel-body">
+              <label id="difficulty">-</label><br>
+              <label id="difficultyHybrid">-</label>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-2 col-sm-12"><img src="/images/logo.png" style="margin-top:-15px;height:128px;"></div>
+        <div class="col-md-2">
+          <div class="panel panel-default hidden-sm hidden-xs">
+            <div class="panel-heading"><strong>Coin Supply (BRK)</strong></div>
+            <div class="panel-body">
+              <label id="supply">- </label><br>
+              <label id="lblX1"></label>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-2">
+          <div class="panel panel-default hidden-sm hidden-xs">
+            <div class="panel-heading"><strong>BTC Price</strong></div>
+            <div class="panel-body">
+              <label id="lastPrice">-</label><br>
+              <label id="lblX1"></label>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div style="margin-top:10px;margin-bottom:20px;" class="row text-center">
+        <form method="post" action="/search" class="form-inline">     
+          <div id="index-search" class="form-group">
+            <input type="text" name="search" placeholder="You may enter a block height, block hash, tx hash or address." style="min-width:80%;margin-right:5px;" class="form-control">
+            <button type="submit" class="btn btn-success">Search</button>
+          </div>
+        </form>
+      </div>
+    </div>
+    <div class="col-xs-12 col-md-10 col-md-offset-1">
+      <div style="word-wrap:break-word;" class="well well-sm hidden-lg hidden-md">a1b2c3d4e5f60718293a4b5c6d7e8f90112233445566778899aabbccddeeff00</div>
+      <div class="panel panel-default">
+        <div class="panel-heading hidden-xs"><strong>BRK txid: a1b2c3d4e5f60718293a4b5c6d7e8f90112233445566778899aabbccddeeff00</strong><a href="/api/getrawtransaction?txid=a1b2c3d4e5f60718293a4b5c6d7e8f90112233445566778899aabbccddeeff00&amp;decrypt=1"><span class="glyphicon glyphicon-info-sign iquidus pull-right"></span></a></div>
+        <table class="table table-bordered table-striped summary-table"> 
+          <thead>
+            <tr>
+              <th>Confirmations</th>
+              <th class="hidden-xs">Block Hash</th>
+              <th>Timestamp</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr class="success">
+              <td>512</td>
+              <td class="hidden-xs"> <a href="/block/0000000000a1b2c3d4e5f6789abcdef0123456789abcdef0123456789abcdef0">0000000000a1b2c3d4e5f6789abcdef0123456789abcdef0123456789abcdef0</a></td>
+              <td>29th Jun 2026 08:19:08</td>
+              <td class="view_tx"> <a href="/block/0000000000a1b2c3d4e5f6789abcdef0123456789abcdef0123456789abcdef0"><span class="glyphicon glyphicon-eye-open"> </span></a></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="row">
+        <div class="col-md-6">
+          <div class="panel panel-default">
+            <div class="panel-heading"><strong>Input Addresses</strong><span class="glyphicon glyphicon-arrow-right pull-right hidden-xs"></span></div>
+            <table class="table table-bordered table-striped summary-table"> 
+              <thead>
+                <tr>
+                  <th>Address</th>
+                  <th class="hidden-xs">Amount (BRK)</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td> <a href="/address/bRn8Tg5Kx2Wp9Lm4Vd7Qc3Yh6Js1Ue0z" class="loading"> bRn8Tg5Kx2Wp9Lm4Vd7Qc3Yh6Js1Ue0z</a></td>
+                  <td class="danger hidden-xs">51.50000000</td>
+                </tr>
+                <tr class="hidden-lg hidden-md">
+                  <td class="danger">51.50000000 BRK</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div class="col-md-6">
+          <div class="panel panel-default">
+            <div class="panel-heading"><strong>Recipients</strong></div>
+            <table class="table table-bordered table-striped summary-table"> 
+              <thead>
+                <tr>
+                  <th>Address</th>
+                  <th class="hidden-xs">Amount (BRK)</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td> <a href="/address/bKqf3Vd9rQ8Wq7mZxN2pLcYtH6sJ4uE1a" class="loading"> bKqf3Vd9rQ8Wq7mZxN2pLcYtH6sJ4uE1a</a></td>
+                  <td class="success hidden-xs"> 50.00000000</td>
+                </tr>
+                <tr class="hidden-lg hidden-md">
+                  <td class="success">50.00000000 BRK</td>
+                </tr>
+                <tr>
+                  <td> <a href="/address/bRn8Tg5Kx2Wp9Lm4Vd7Qc3Yh6Js1Ue0z" class="loading"> bRn8Tg5Kx2Wp9Lm4Vd7Qc3Yh6Js1Ue0z</a></td>
+                  <td class="success hidden-xs"> 1.50000000</td>
+                </tr>
+                <tr class="hidden-lg hidden-md">
+                  <td class="success">1.50000000 BRK</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      <div class="footer-padding"></div>
+    </div>
+    <div class="navbar navbar-default navbar-fixed-bottom hidden-xs">
+      <div class="col-md-4">
+        <ul class="nav navbar-nav">
+          <li class="pull-left"><a id="twitter-icon" href="https://twitter.com/breakoutcoin" target="_blank"><span class="glyphicon fa fa-twitter"></span></a></li>
+        </ul>
+        <ul class="nav navbar-nav">
+          <li class="pull-left"><a id="facebook-icon" href="https://www.facebook.com/breakoutandwin" target="_blank"><span class="glyphicon fa fa-facebook"></span></a></li>
+        </ul>
+      </div>
+      <div class="col-md-4">
+        <ul class="nav">
+          <li style="margin-left:80px;margin-right:80px;" class="text-center">
+            <p style="margin-top:15px;"> <a href="https://github.com/iquidus/explorer" target="_blank" class="navbar-link">Powered by Iquidus Explorer </a></p>
+          </li>
+        </ul>
+      </div><span class="connections">
+        <label id="lblBlockcount" class="label label-default">-</label>
+        <label id="lblConnections" class="label label-default">-</label></span>
+    </div>
+  </body>
+</html>

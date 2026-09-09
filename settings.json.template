@@ -34,7 +34,7 @@
   // database settings (MongoDB)
   "dbsettings": {
     "user": "iquidus",
-    "password": "3xp!0reR",
+    "password": "CHANGE_ME",
     "database": "explorerdb",
     "address": "localhost",
     "port": 27017
@@ -49,7 +49,7 @@
     "host": "localhost",
     "port": 9332,
     "user": "darkcoinrpc",
-    "pass": "123gfjk3R3pCCVjHtbRde2s5kzdf233sa"
+    "pass": "CHANGE_ME"
   },
 
   // confirmations

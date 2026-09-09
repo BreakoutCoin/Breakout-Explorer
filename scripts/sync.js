@@ -1,8 +1,9 @@
 var mongoose = require('mongoose')
   , db = require('../lib/database')
   , Tx = require('../models/tx')  
-  , Address = require('../models/address')  
-  , Richlist = require('../models/richlist')  
+  , Address = require('../models/address')
+  , AddressBalance = require('../models/addressbalance')
+  , Richlist = require('../models/richlist')
   , Stats = require('../models/stats')  
   , settings = require('../lib/settings')
   , fs = require('fs');
@@ -61,7 +62,7 @@ if (process.argv[2] == 'index') {
 function create_lock(cb) {
   if ( database == 'index' ) {
     var fname = './tmp/' + database + '.pid';
-    fs.appendFile(fname, process.pid, function (err) {
+    fs.appendFile(fname, String(process.pid), function (err) {
       if (err) {
         console.log("Error: unable to create %s", fname);
         process.exit(1);
@@ -112,11 +113,12 @@ function exit() {
   });
 }
 
-var dbString = 'mongodb://' + settings.dbsettings.user;
-dbString = dbString + ':' + settings.dbsettings.password;
+var dbString = 'mongodb://' + encodeURIComponent(settings.dbsettings.user);
+dbString = dbString + ':' + encodeURIComponent(settings.dbsettings.password);
 dbString = dbString + '@' + settings.dbsettings.address;
 dbString = dbString + ':' + settings.dbsettings.port;
 dbString = dbString + '/' + settings.dbsettings.database;
+dbString = dbString + '?authSource=' + settings.dbsettings.database;
 
 is_locked(function (exists) {
   if (exists) {
@@ -125,7 +127,11 @@ is_locked(function (exists) {
   } else {
     create_lock(function (){
       console.log("script launched with pid: " + process.pid);
-      mongoose.connect(dbString, function(err) {
+      mongoose.connect(dbString, {
+          useNewUrlParser:    true,
+          useUnifiedTopology: true,
+          authSource:         settings.dbsettings.database,
+        }, function(err) {
         if (err) {
           console.log('Unable to connect to database: %s', dbString);
           console.log('Aborting');
@@ -144,17 +150,18 @@ is_locked(function (exists) {
                     });
                   }
                   if (mode == 'reindex') {
-                    Tx.remove({}, function(err) { 
-                      Address.remove({}, function(err2) { 
+                    Tx.remove({}, function(err) {
+                      Address.remove({}, function(err2) {
+                        AddressBalance.remove({}, function(errAB) {
                         Richlist.update({coin: settings.coin}, {
                           received: [],
                           balance: [],
-                        }, function(err3) { 
-                          Stats.update({coin: settings.coin}, { 
+                        }, function(err3) {
+                          Stats.update({coin: settings.coin}, {
                             last: 0,
                           }, function() {
                             console.log('index cleared (reindex)');
-                          }); 
+                          });
                           db.update_tx_db(settings.coin, 1, stats.count, settings.update_timeout, function(){
                             db.update_richlist('received', function(){
                               db.update_richlist('balance', function(){
@@ -166,8 +173,9 @@ is_locked(function (exists) {
                             });
                           });
                         });
+                        });
                       });
-                    });              
+                    });
                   } else if (mode == 'check') {
                     db.update_tx_db(settings.coin, 1, stats.count, settings.check_timeout, function(){
                       db.get_stats(settings.coin, function(nstats){

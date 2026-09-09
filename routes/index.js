@@ -50,7 +50,7 @@ function route_get_tx(res, txid) {
           if (rtx.txid) {
             lib.prepare_vin(rtx, function(vin) {
               lib.prepare_vout(rtx.vout, rtx.txid, vin, function(rvout, rvin) {
-                lib.calculate_totals(rvout, function(totals){
+                lib.calculate_totals(rvout, rtx.flags, function(totals){
                   if (!rtx.confirmations > 0) {
                     var utx = {
                       txid: rtx.txid,

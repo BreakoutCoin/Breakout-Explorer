@@ -8,6 +8,7 @@ var TxSchema = new Schema({
   fees: { type: Array, default: [] },
   burnt: { type: Array, default: [] },
   totals: { type: Array, default: [] },
+  total: { type: Number, default: 0 },
   timestamp: { type: Number, default: 0 },
   blockhash: { type: String },
   blockindex: { type: Number, default: 0 },
