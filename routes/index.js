@@ -4,6 +4,8 @@ var express = require('express')
   , locale = require('../lib/locale')
   , db = require('../lib/database')
   , lib = require('../lib/explorer')
+  , rpc = require('../lib/rpc')
+  , currs = require('../lib/currencies')
   , qr = require('qr-image');
 
 function route_get_block(res, blockhash) {
@@ -92,32 +94,49 @@ function route_get_index(res, error) {
   res.render('index', { active: 'home', error: error, warning: null});
 }
 
+// The address page reads the daemon's Explore index, not Mongo.
+//
+// The view wants a document shaped like the old Address model -- a_id, sent,
+// received and currency, with the amounts in toshis -- so getaddressinfo's
+// coin-denominated floats are converted back. The transactions themselves are
+// still read from the tx index, because that is where this explorer's
+// currency-tagged vin/vout live; only the ADDRESS totals have moved.
+//
+// This also lifts the settings.txcount ceiling: getaddresstxspg pages the whole
+// history rather than the last 100 the Address document happened to retain.
+function to_toshis(coins) {
+  // via the fixed-point string, not coins * 1e8, which rounds badly
+  return parseInt(Number(coins).toFixed(8).replace('.', ''), 10);
+}
+
 function route_get_address(res, hash, count) {
-  db.get_address(hash, function(address) {
-    if (address) {
+  rpc.call('getaddressinfo', {address: hash}, function(info) {
+    if (!info || typeof info !== 'object' || info.balance === undefined) {
+      return route_get_index(res, hash + ' not found');
+    }
+    var address = {
+      a_id: hash,
+      sent: to_toshis(info.sent),
+      received: to_toshis(info.received),
+      balance: to_toshis(info.balance),
+      currency: currs.ticker(info.color) || settings.symbol,
+      txs: []
+    };
+    rpc.call('getaddresstxspg',
+             {address: hash, page: 1, perpage: count, ordering: false},
+             function(page) {
+      var rows = (page && typeof page === 'object' && page.data) ? page.data : [];
       var txs = [];
-      var hashes = address.txs.reverse();
-      if (address.txs.length < count) {
-        count = address.txs.length;
-      }
-      lib.syncLoop(count, function (loop) {
+      lib.syncLoop(rows.length, function (loop) {
         var i = loop.iteration();
-        db.get_tx(hashes[i].addresses, function(tx) {
-          if (tx) {
-            txs.push(tx);
-            loop.next();
-          } else {
-            loop.next();
-          }
+        db.get_tx(rows[i].txid, function(tx) {
+          if (tx) txs.push(tx);
+          loop.next();
         });
       }, function(){
-
         res.render('address', { active: 'address', address: address, txs: txs});
       });
-
-    } else {
-      route_get_index(res, hash + ' not found');
-    }
+    });
   });
 }
 
@@ -252,9 +271,12 @@ router.post('/search', function(req, res) {
       });
     }
   } else {
-    db.get_address(query, function(address) {
-      if (address) {
-        res.redirect('/address/' + address.a_id);
+    // Search: does the query name an address the chain knows? Asking the
+    // Explore index rather than Mongo also means an address with no indexed
+    // transactions still resolves.
+    rpc.call('getaddressinfo', {address: query}, function(info) {
+      if (info && typeof info === 'object' && info.balance !== undefined) {
+        res.redirect('/address/' + query);
       } else {
         lib.get_blockhash(query, function(hash) {
           if (hash != 'There was an error. Check your console.') {

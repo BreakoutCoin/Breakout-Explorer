@@ -11,6 +11,7 @@ var express = require('express')
   , db = require('./lib/database')
   , locale = require('./lib/locale')
   , request = require('request')
+  , rpc = require('./lib/rpc')
   , Tx = require('./models/tx')
   , Address = require('./models/address')
   , AddressBalance = require('./models/addressbalance');
@@ -104,30 +105,70 @@ app.use('/ext/getmoneysupply', function(req,res){
   });
 });
 
-app.use('/ext/getaddress/:hash', function(req,res){
-  db.get_address(req.param('hash'), function(address){
-    if (address) {
-      var a_ext = {
-        address: address.a_id,
-        sent: (address.sent / settings.toshis),
-        received: (address.received / settings.toshis),
-        balance: (address.balance / settings.toshis).toString().replace(/(^-+)/mg, ''),
-        last_txs: address.txs,
-      };
-      res.send(a_ext);
-    } else {
-      res.send({ error: 'address not found.', hash: req.param('hash')})
+// Address data now comes from the daemon's Explore index rather than Mongo.
+//
+// Two things improve as a result. The balance is the chain's own, not a total
+// this explorer accumulated transaction by transaction and could drift from.
+// And last_txs is no longer capped at settings.txcount (100) -- getaddresstxspg
+// pages the full history, so `count` can exceed what the Mongo index kept.
+//
+// The response shape is unchanged, so the address page and the front end need
+// no changes: last_txs entries keep the {addresses: <txid>, type: ...} form
+// Iquidus used, odd as that key name is.
+function explore_address(hash, count, cb) {
+  rpc.call('getaddressinfo', {address: hash}, function(info){
+    if (!info || typeof info !== 'object' || info.balance === undefined) {
+      return cb(null);
     }
+    if (!count) {
+      return cb({info: info, txs: []});
+    }
+    // ordering:false = newest first. This is the call that cannot be made
+    // through the /api/ passthrough at all, since it cannot carry a boolean.
+    rpc.call('getaddresstxspg',
+             {address: hash, page: 1, perpage: count, ordering: false},
+             function(page){
+      var rows = (page && typeof page === 'object' && page.data) ? page.data : [];
+      return cb({info: info, txs: rows});
+    });
+  });
+}
+
+// vin/vout classification for a row of getaddresstxspg. An address that both
+// spends and receives in one transaction counts as a spend, matching how
+// Iquidus recorded it.
+function txrow_type(row) {
+  var ins = row.address_inputs, outs = row.address_outputs;
+  if (ins && ins.length) return 'vin';
+  if (outs && outs.length) return 'vout';
+  return 'vout';
+}
+
+app.use('/ext/getaddress/:hash', function(req,res){
+  var hash = req.param('hash');
+  explore_address(hash, settings.txcount || 100, function(r){
+    if (!r) return res.send({ error: 'address not found.', hash: hash});
+    res.send({
+      address: hash,
+      sent: r.info.sent,
+      received: r.info.received,
+      balance: String(r.info.balance).replace(/(^-+)/mg, ''),
+      last_txs: r.txs.map(function(t){
+        return { addresses: t.txid, type: txrow_type(t) };
+      })
+    });
   });
 });
 
 app.use('/ext/getbalance/:hash', function(req,res){
-  db.get_address(req.param('hash'), function(address){
-    if (address) {
-      res.send((address.balance / settings.toshis).toString().replace(/(^-+)/mg, ''));
-    } else {
-      res.send({ error: 'address not found.', hash: req.param('hash')})
+  var hash = req.param('hash');
+  rpc.call('getaddressbalance', {address: hash}, function(bal){
+    if (bal === rpc.ERRSTR || bal === undefined || bal === null) {
+      return res.send({ error: 'address not found.', hash: hash});
     }
+    // getaddressbalance answers "3542473.27180316 BRK"; the endpoint has always
+    // returned a bare number as a string, so keep it that way.
+    res.send(String(bal).split(' ')[0].replace(/(^-+)/mg, ''));
   });
 });
 
