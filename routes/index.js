@@ -173,36 +173,57 @@ router.get('/markets/:market', function(req, res) {
 });
 
 router.get('/richlist', function(req, res) {
-  if (settings.display.richlist == true ) {
-    db.get_stats(settings.coin, function (stats) {
-      db.get_richlist(settings.coin, function(richlist){
-        //console.log(richlist);
-        if (richlist) {
-          db.get_distribution(richlist, stats, function(distribution) {
-            //console.log(distribution);
-            res.render('richlist', {
-              active: 'richlist',
-              balance: richlist.balance,
-              received: richlist.received,
-              stats: stats,
-              dista: distribution.t_1_25,
-              distb: distribution.t_26_50,
-              distc: distribution.t_51_75,
-              distd: distribution.t_76_100,
-              diste: distribution.t_101plus,
-              show_dist: settings.richlist.distribution,
-              show_received: settings.richlist.received,
-              show_balance: settings.richlist.balance,
-            });
-          });
-        } else {
-          route_get_index(res, null);
-        }
+  if (settings.display.richlist != true) return route_get_index(res, null);
+
+  // Rich list straight from the daemon.
+  //
+  // The "Received" tab is gone. It ranked addresses by lifetime total
+  // received, which the Explore API does not offer and which needed the
+  // Address collection kept solely to answer it. It is also of doubtful use:
+  // an address that received and forwarded a large sum ranks above one that
+  // still holds a smaller one.
+  var color = currs.color(settings.symbol);
+  lib.get_moneysupply(settings.symbol, function(supply) {
+    supply = supply || 0;
+    rpc.call('getrichlist', {color: color, start: 1, max: 100}, function(list) {
+      if (!list || typeof list !== 'object') return route_get_index(res, null);
+
+      // GetRichList returns everyone tied for last place, so max=100 can yield
+      // more than 100; sort and trim rather than trusting the length.
+      var balance = Object.keys(list).map(function(addr) {
+        return { a_id: addr, balance: to_toshis(list[addr]) };
+      });
+      balance.sort(function(a, b){ return b.balance - a.balance; });
+      balance = balance.slice(0, 100);
+
+      var tiers = { t_1_25:{p:0,t:0}, t_26_50:{p:0,t:0},
+                    t_51_75:{p:0,t:0}, t_76_100:{p:0,t:0} };
+      balance.forEach(function(item, i) {
+        var coins = item.balance / settings.toshis;
+        var pct = supply > 0 ? (coins / supply * 100) : 0;
+        var n = i + 1;
+        var k = n<=25?'t_1_25':n<=50?'t_26_50':n<=75?'t_51_75':n<=100?'t_76_100':null;
+        if (k) { tiers[k].p += pct; tiers[k].t += coins; }
+      });
+      var sumP = tiers.t_1_25.p + tiers.t_26_50.p + tiers.t_51_75.p + tiers.t_76_100.p;
+      var sumT = tiers.t_1_25.t + tiers.t_26_50.t + tiers.t_51_75.t + tiers.t_76_100.t;
+      var f = function(o){ return { percent: o.p.toFixed(2), total: o.t.toFixed(8) }; };
+
+      res.render('richlist', {
+        active: 'richlist',
+        balance: balance,
+        stats: { supply: supply },
+        dista: f(tiers.t_1_25),
+        distb: f(tiers.t_26_50),
+        distc: f(tiers.t_51_75),
+        distd: f(tiers.t_76_100),
+        diste: { percent: Math.max(0, 100 - sumP).toFixed(2),
+                 total: Math.max(0, supply - sumT).toFixed(8) },
+        show_dist: settings.richlist.distribution,
+        show_balance: settings.richlist.balance
       });
     });
-  } else {
-    route_get_index(res, null);
-  }
+  });
 });
 
 router.get('/movement', function(req, res) {

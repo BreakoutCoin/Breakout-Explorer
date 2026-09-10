@@ -12,6 +12,7 @@ var express = require('express')
   , locale = require('./lib/locale')
   , request = require('request')
   , rpc = require('./lib/rpc')
+  , currs = require('./lib/currencies')
   , Tx = require('./models/tx')
   , Address = require('./models/address')
   , AddressBalance = require('./models/addressbalance');
@@ -172,12 +173,34 @@ app.use('/ext/getbalance/:hash', function(req,res){
   });
 });
 
+// Legacy distribution endpoint for the main coin. Same tiers as
+// /ext/getcoindist, kept for API compatibility; both now read the daemon.
 app.use('/ext/getdistribution', function(req,res){
-  db.get_richlist(settings.coin, function(richlist){
-    db.get_stats(settings.coin, function(stats){
-      db.get_distribution(richlist, stats, function(dist){
-        res.send(dist);
-      });
+  var coin = settings.symbol;
+  lib.get_moneysupply(coin, function(supply){
+    supply = supply || 0;
+    rpc.call('getrichlist', {color: currs.color(coin), start: 1, max: 100}, function(list){
+      var top = [];
+      if (list && typeof list === 'object') {
+        for (var a in list) {
+          if (Object.prototype.hasOwnProperty.call(list, a)) top.push(list[a]);
+        }
+        top.sort(function(x, y){ return y - x; });
+        top = top.slice(0, 100);
+      }
+      var tiers = { t_1_25:{p:0,t:0}, t_26_50:{p:0,t:0}, t_51_75:{p:0,t:0}, t_76_100:{p:0,t:0} };
+      for (var i = 0; i < top.length; i++) {
+        var pct = supply > 0 ? (top[i] / supply * 100) : 0, n = i + 1;
+        var k = n<=25?'t_1_25':n<=50?'t_26_50':n<=75?'t_51_75':n<=100?'t_76_100':null;
+        if (k) { tiers[k].p += pct; tiers[k].t += top[i]; }
+      }
+      var sumP = tiers.t_1_25.p + tiers.t_26_50.p + tiers.t_51_75.p + tiers.t_76_100.p;
+      var sumT = tiers.t_1_25.t + tiers.t_26_50.t + tiers.t_51_75.t + tiers.t_76_100.t;
+      var f = function(o){ return { percent: Number(o.p).toFixed(2), total: Number(o.t).toFixed(8) }; };
+      res.send({ supply: supply, t_1_25: f(tiers.t_1_25), t_26_50: f(tiers.t_26_50),
+        t_51_75: f(tiers.t_51_75), t_76_100: f(tiers.t_76_100),
+        t_101plus: { percent: Math.max(0, 100 - sumP).toFixed(2),
+                     total: Number(Math.max(0, supply - sumT)).toFixed(8) } });
     });
   });
 });
@@ -218,12 +241,16 @@ app.use('/ext/connections', function(req,res){
 // in the index, so those cannot be derived truthfully without an indexer change.
 app.use('/ext/getcoinstats/:coin', function(req,res){
   var coin = (req.params.coin || '').toUpperCase();
+  var color = currs.color(coin);
+  // txcount still comes from the tx index: the Explore API is address-scoped
+  // and has no per-currency transaction count.
   Tx.count({ 'vout.currency': coin }, function(err, txcount){
-    // holders + supply come from the per-currency AddressBalance side-collection
-    // (populated by a reindex). Absent that, they resolve to 0 and the UI shows —.
-    db.get_holders(coin, 1, function(h){
-      db.get_coin_supply(coin, function(supply){
-        res.send({ coin: coin, txcount: (err ? 0 : (txcount || 0)), holders: (h && h.holders) || 0, supply: supply || 0 });
+    lib.get_moneysupply(coin, function(supply){
+      rpc.call('getrichlistsize', {color: color}, function(holders){
+        res.send({ coin: coin,
+                   txcount: (err ? 0 : (txcount || 0)),
+                   holders: (typeof holders === 'number' ? holders : 0),
+                   supply: supply || 0 });
       });
     });
   });
@@ -232,13 +259,22 @@ app.use('/ext/getcoinstats/:coin', function(req,res){
 // per-coin wealth distribution tiers, computed from AddressBalance (any currency).
 // (distinct name from the legacy /ext/getdistribution so its prefix match can't shadow this)
 app.use('/ext/getcoindist/:coin', function(req,res){
-  var coin = (req.params.coin || '').toUpperCase(), T = settings.toshis;
-  db.get_coin_supply(coin, function(supply){
-    db.get_holders(coin, 100, function(h){
-      var top = (h && h.top) || [];
+  var coin = (req.params.coin || '').toUpperCase();
+  var color = currs.color(coin);
+  lib.get_moneysupply(coin, function(supply){
+    supply = supply || 0;
+    rpc.call('getrichlist', {color: color, start: 1, max: 100}, function(list){
+      var top = [];
+      if (list && typeof list === 'object') {
+        for (var a in list) {
+          if (Object.prototype.hasOwnProperty.call(list, a)) top.push(list[a]);
+        }
+        top.sort(function(x, y){ return y - x; });
+        top = top.slice(0, 100);
+      }
       var tiers = { t_1_25:{p:0,t:0}, t_26_50:{p:0,t:0}, t_51_75:{p:0,t:0}, t_76_100:{p:0,t:0} };
       for (var i = 0; i < top.length; i++) {
-        var bal = (top[i].balance || 0) / T, pct = supply > 0 ? (bal / supply * 100) : 0, n = i + 1;
+        var bal = top[i], pct = supply > 0 ? (bal / supply * 100) : 0, n = i + 1;
         var k = n<=25?'t_1_25':n<=50?'t_26_50':n<=75?'t_51_75':n<=100?'t_76_100':null;
         if (k) { tiers[k].p += pct; tiers[k].t += bal; }
       }
@@ -253,33 +289,96 @@ app.use('/ext/getcoindist/:coin', function(req,res){
 });
 
 // per-coin balance-bucket histogram, from AddressBalance (excludes synthetic rows).
-app.use('/ext/getcoinbuckets/:coin', function(req,res){
-  var coin = (req.params.coin || '').toUpperCase(), T = settings.toshis;
-  var ranges = [['0 – 1',0,1*T], ['1 – 10',1*T,10*T], ['10 – 100',10*T,100*T],
-                ['100 – 1k',100*T,1000*T], ['1k – 10k',1000*T,10000*T], ['10k +',10000*T,null]];
-  var out = [], i = 0;
+// Balance-bucket histogram, shared by /ext/getcoinbuckets and /ext/getbalancedist.
+//
+// getrichlistsize(color, minbalance) counts addresses holding AT LEAST
+// minbalance, so each bucket is the difference between the counts at its two
+// edges. Six cheap counts replace six collection scans, and no address list is
+// enumerated at all.
+//
+// The lowest bucket starts at a cent rather than zero: the daemon does not
+// track balances at or below ExploreMaxDust, so "0 - 1" means "0.01 up to 1".
+// The labels are unchanged so chart legends are unaffected.
+var BALANCE_BUCKETS = [
+  ['0 – 1',      0.01,  1],
+  ['1 – 10',        1, 10],
+  ['10 – 100',     10, 100],
+  ['100 – 1k',    100, 1000],
+  ['1k – 10k',   1000, 10000],
+  ['10k +',     10000, null]
+];
+
+function balance_buckets(color, cb) {
+  if (color === undefined) {
+    return cb(BALANCE_BUCKETS.map(function(e){ return { label: e[0], count: 0 }; }));
+  }
+  var wanted = [];
+  BALANCE_BUCKETS.forEach(function(e){
+    if (wanted.indexOf(e[1]) === -1) wanted.push(e[1]);
+    if (e[2] !== null && wanted.indexOf(e[2]) === -1) wanted.push(e[2]);
+  });
+  var counts = {}, i = 0;
   (function next(){
-    if (i >= ranges.length) return res.send({ coin: coin, data: out });
-    var r = ranges[i];
-    var q = { currency: coin, a_id: { $not: /^(coinbase-|burnt-|scavenged-)/ }, balance: { $gt: 0, $gte: r[1] } };
-    if (r[2] != null) q.balance.$lt = r[2];
-    AddressBalance.count(q, function(err, c){ out.push({ label: r[0], count: (err ? 0 : (c || 0)) }); i++; next(); });
+    if (i >= wanted.length) {
+      return cb(BALANCE_BUCKETS.map(function(e){
+        var lo = counts[e[1]] || 0;
+        var hi = (e[2] === null) ? 0 : (counts[e[2]] || 0);
+        return { label: e[0], count: Math.max(0, lo - hi) };
+      }));
+    }
+    var edge = wanted[i];
+    rpc.call('getrichlistsize', {color: color, minbalance: edge}, function(n){
+      counts[edge] = (typeof n === 'number') ? n : 0;
+      i++; next();
+    });
   })();
+}
+
+app.use('/ext/getcoinbuckets/:coin', function(req,res){
+  var coin = (req.params.coin || '').toUpperCase();
+  balance_buckets(currs.color(coin), function(data){
+    res.send({ coin: coin, data: data });
+  });
 });
 
 // per-coin holder count + top holders (privacy: distribution use only; full list available for API consumers)
+// Top holders, from the daemon's rich list.
+//
+// The holder COUNT changes meaning slightly here, and more honestly: the
+// daemon does not track balances at or below ExploreMaxDust (one cent of the
+// colour) -- see the "dust balances are not tracked this way" comment in
+// explore.cpp -- so this counts addresses holding more than a cent, where the
+// old AddressBalance query counted anything above zero. For BRX that is 6274
+// rather than 6314.
 app.use('/ext/getholders/:coin', function(req,res){
   var coin = (req.params.coin || '').toUpperCase();
-  db.get_holders(coin, 100, function(h){
-    res.send({ coin: coin, holders: (h && h.holders) || 0,
-      top: ((h && h.top) || []).map(function(a){ return { address: a.a_id, balance: a.balance / settings.toshis }; }) });
+  var color = currs.color(coin);
+  if (color === undefined) return res.send({ coin: coin, holders: 0, top: [] });
+  rpc.call('getrichlistsize', {color: color}, function(holders){
+    rpc.call('getrichlist', {color: color, start: 1, max: 100}, function(list){
+      var top = [];
+      if (list && typeof list === 'object') {
+        for (var addr in list) {
+          if (Object.prototype.hasOwnProperty.call(list, addr)) {
+            top.push({ address: addr, balance: list[addr] });
+          }
+        }
+        // GetRichList returns everyone tied for the last place, so max=100 can
+        // return more than 100. Sort and trim rather than trusting the length.
+        top.sort(function(a, b){ return b.balance - a.balance; });
+        top = top.slice(0, 100);
+      }
+      res.send({ coin: coin,
+                 holders: (typeof holders === 'number' ? holders : 0),
+                 top: top });
+    });
   });
 });
 
 // per-coin money supply (minted - burned), in coins
 app.use('/ext/getsupply/:coin', function(req,res){
   var coin = (req.params.coin || '').toUpperCase();
-  db.get_coin_supply(coin, function(supply){ res.send({ coin: coin, supply: supply || 0 }); });
+  lib.get_moneysupply(coin, function(supply){ res.send({ coin: coin, supply: supply || 0 }); });
 });
 
 // last N blocks (max 100), derived from the tx index. Iquidus keeps no block
@@ -446,19 +545,11 @@ app.use('/ext/getcardtxs/:count', function(req,res){
   });
 });
 
-// balance-bucket histogram — address counts per balance range (main coin).
-// Balances are stored in toshis; ranges below are in coins * settings.toshis.
+// balance-bucket histogram for the main coin (settings.symbol).
 app.use('/ext/getbalancedist', function(req,res){
-  var T = settings.toshis;
-  var ranges = [['0 – 1', 0, 1*T], ['1 – 10', 1*T, 10*T], ['10 – 100', 10*T, 100*T],
-                ['100 – 1k', 100*T, 1000*T], ['1k – 10k', 1000*T, 10000*T], ['10k +', 10000*T, null]];
-  var out = [], i = 0;
-  (function next(){
-    if (i >= ranges.length) return res.send({ coin: settings.coin, data: out });
-    var r = ranges[i], q = { balance: { $gte: r[1] } };
-    if (r[2] != null) q.balance.$lt = r[2];
-    Address.count(q, function(err, c){ out.push({ label: r[0], count: (err ? 0 : (c || 0)) }); i++; next(); });
-  })();
+  balance_buckets(currs.color(settings.symbol), function(data){
+    res.send({ coin: settings.coin, data: data });
+  });
 });
 
 // large transfers ("movement") — txs with a single output >= threshold, paged.
