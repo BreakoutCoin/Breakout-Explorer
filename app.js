@@ -13,9 +13,7 @@ var express = require('express')
   , request = require('request')
   , rpc = require('./lib/rpc')
   , currs = require('./lib/currencies')
-  , Tx = require('./models/tx')
-  , Address = require('./models/address')
-  , AddressBalance = require('./models/addressbalance');
+  , Tx = require('./models/tx');
 
 var app = express();
 
@@ -256,7 +254,7 @@ app.use('/ext/getcoinstats/:coin', function(req,res){
   });
 });
 
-// per-coin wealth distribution tiers, computed from AddressBalance (any currency).
+// per-coin wealth distribution tiers, from the daemon's rich list.
 // (distinct name from the legacy /ext/getdistribution so its prefix match can't shadow this)
 app.use('/ext/getcoindist/:coin', function(req,res){
   var coin = (req.params.coin || '').toUpperCase();
@@ -288,7 +286,6 @@ app.use('/ext/getcoindist/:coin', function(req,res){
   });
 });
 
-// per-coin balance-bucket histogram, from AddressBalance (excludes synthetic rows).
 // Balance-bucket histogram, shared by /ext/getcoinbuckets and /ext/getbalancedist.
 //
 // getrichlistsize(color, minbalance) counts addresses holding AT LEAST
