@@ -614,19 +614,57 @@ app.use('/ext/getbalancedist', function(req,res){
   });
 });
 
-// large transfers ("movement") — txs with a single output >= threshold, paged.
-// filter = all | BRK | BRX | SIS (per-currency via elemMatch on vout).
+// Large transfers ("movement"), from the daemon's movement index.
+//
+// This used to scan the whole tx collection for an output over a hard-coded
+// 100,000 coins -- a full collection scan per page, counting stake
+// self-returns as transfers, and showing nothing newer than block 964,994.
+//
+// The daemon now keeps an index of transactions that moved value to someone
+// who did not send it, so this is a paged read. A transaction qualifies when
+// some address that none of the inputs came from receives at least the cutoff;
+// a stake handing its principal back to itself does not qualify, and neither
+// does a large change output returning to a sender.
+//
+// The cutoff is a query parameter, not a property of the index, so
+// settings.movement.min_amount can be retuned without touching the daemon --
+// as long as it stays at or above the floor the index was built with.
 app.use('/ext/getmovement/:filter/:page', function(req,res){
   var per = 12, page = Math.max(1, parseInt(req.params.page, 10) || 1);
   var f = (req.params.filter || 'all').toUpperCase();
-  var TH = 100000 * settings.toshis; // 100k coins
-  var query = (f === 'ALL' || f === '') ? { 'vout.amount': { $gte: TH } }
-                                        : { vout: { $elemMatch: { currency: f, amount: { $gte: TH } } } };
-  Tx.count(query, function(err, total){
-    total = total || 0;
-    Tx.find(query).sort({ _id: -1 }).skip((page - 1) * per).limit(per).exec(function(e2, txs){
-      res.send({ page: page, per: per, total: total, pages: Math.max(1, Math.ceil(total / per)), threshold: TH, data: (txs || []) });
-    });
+  var color = (f === 'ALL' || f === '') ? 0 : (currs.color(f) || 0);
+  var mincoins = settings.movement.min_amount || 100;
+  var TH = mincoins * settings.toshis;
+
+  function empty(){
+    res.send({ page: page, per: per, total: 0, pages: 1, threshold: TH, data: [] });
+  }
+
+  rpc.call('getmovementspg',
+           {page: page, perpage: per, ordering: false,
+            mincoins: mincoins, color: color},
+           function(r){
+    if (!r || typeof r !== 'object' || !r.data) return empty();
+
+    // The index says which transactions; the transactions themselves still
+    // come from the daemon, so the response keeps the shape the movement view
+    // already renders (vin/vout/timestamp and the rest).
+    var rows = r.data, out = [], i = 0;
+    (function next(){
+      if (i >= rows.length) {
+        return res.send({ page: r.page, per: r.per_page, total: r.total,
+                          pages: r.last_page, threshold: TH, data: out });
+      }
+      var txid = rows[i].txid;
+      lib.get_rawtransaction(txid, function(rtx){
+        if (!rtx || !rtx.txid) { i++; return next(); }
+        lib.get_block(rtx.blockhash, function(block){
+          lib.assemble_tx(rtx, block, function(tx){
+            out.push(tx); i++; next();
+          });
+        });
+      });
+    })();
   });
 });
 
