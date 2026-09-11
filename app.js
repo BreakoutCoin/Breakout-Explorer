@@ -479,23 +479,50 @@ app.use('/ext/getblockpage/:page', function(req,res){
 
 // The Deck — all 53 cards' current holder + movement summary, from one pass over
 // every Deck-currency tx (vout.currency is a 3-char Dxx ticker). Used by the gallery.
-app.use('/ext/getdeck', function(req,res){
-  Tx.find({ 'vout.currency': /^D/ }).sort({ blockindex: 1, timestamp: 1 }).exec(function(err, txs){
-    var cards = {};
-    (txs || []).forEach(function(tx){
-      (tx.vout || []).forEach(function(o){
-        var c = o.currency;
-        if (!c || c.length !== 3 || c.charAt(0) !== 'D' || !o.address) return;
-        if (!cards[c]) cards[c] = { ticker: c, holder: null, mintBlock: null, transfers: 0, lastBlock: null };
-        var card = cards[c];
-        if (card.holder !== null && o.address === card.holder) return; // [JAMES_HANDOFF change 2/3] stake self-ride — card returned to same holder, not a transfer
-        card.transfers++;
-        card.holder = o.address;
-        card.lastBlock = tx.blockindex;
-        if (card.mintBlock === null) card.mintBlock = tx.blockindex;
-      });
+// The Deck, from the daemon's card index.
+//
+// getcardinfo gives a card's full provenance -- holder, mint block, every
+// transfer and the stake count -- and its shape is already exactly what
+// /ext/getcard returned from Mongo, so that endpoint is a passthrough.
+//
+// The whole-deck views need all 53, which is 53 calls, so they share one
+// cache. Cards change hands rarely; a stale entry for a few seconds is not
+// worth 53 round trips per request.
+var deck_cache = {at: 0, cards: null};
+
+function load_deck(cb) {
+  if (deck_cache.cards && (Date.now() - deck_cache.at) < 30000) {
+    return cb(deck_cache.cards);
+  }
+  var tickers = currs.deck(), cards = {}, i = 0;
+  (function next(){
+    if (i >= tickers.length) {
+      deck_cache = {at: Date.now(), cards: cards};
+      return cb(cards);
+    }
+    var t = tickers[i];
+    rpc.call('getcardinfo', {ticker: t}, function(info){
+      if (info && typeof info === 'object' && info.ticker) cards[t] = info;
+      i++; next();
     });
-    res.send({ data: cards });
+  })();
+}
+
+app.use('/ext/getdeck', function(req,res){
+  load_deck(function(cards){
+    var out = {};
+    for (var t in cards) {
+      if (!Object.prototype.hasOwnProperty.call(cards, t)) continue;
+      var c = cards[t], xs = c.transfers || [];
+      out[t] = {
+        ticker: c.ticker,
+        holder: c.holder,
+        mintBlock: c.mintBlock,
+        transfers: xs.length,
+        lastBlock: xs.length ? xs[xs.length - 1].block : null
+      };
+    }
+    res.send({ data: out });
   });
 });
 
@@ -506,39 +533,43 @@ app.use('/ext/getdeck', function(req,res){
 // the same so the gallery's transfer counts agree.
 app.use('/ext/getcard/:ticker', function(req,res){
   var ticker = (req.params.ticker || '').toUpperCase();
-  Tx.find({ 'vout.currency': ticker }).sort({ blockindex: 1, timestamp: 1 }).exec(function(err, txs){
-    var transfers = [], holder = null, mintBlock = null, stakes = 0;
-    (txs || []).forEach(function(tx){
-      var from = null;
-      (tx.vin || []).forEach(function(v){ if (v.currency === ticker && v.address) from = v.address; });
-      (tx.vout || []).forEach(function(o){
-        if (o.currency === ticker && o.address) {
-          if (holder !== null && o.address === holder) { stakes++; return; } // stake — no change of hands
-          transfers.push({ block: tx.blockindex, txid: tx.txid, to: o.address, from: (from || holder), mint: (holder === null), timestamp: tx.timestamp });
-          holder = o.address;
-          if (mintBlock === null) mintBlock = tx.blockindex;
-        }
-      });
-    });
-    res.send({ ticker: ticker, holder: holder, mintBlock: mintBlock, transfers: transfers, stakes: stakes });
+  rpc.call('getcardinfo', {ticker: ticker}, function(info){
+    if (!info || typeof info !== 'object' || !info.ticker) {
+      return res.send({ ticker: ticker, holder: null, mintBlock: null,
+                        transfers: [], stakes: 0 });
+    }
+    res.send(info);
   });
 });
 
 // recent Deck card movements (newest first), with real from (vin) / to (vout).
+// Most recent card movements across the whole deck, newest first.
+//
+// Note this no longer carries the `fees` array. That came from the Mongo tx
+// record; the card index does not track it, and nothing displays it --
+// public/thedeck.html renders ticker, from, to, block and time only.
 app.use('/ext/getcardtxs/:count', function(req,res){
   var count = Math.min(Math.max(parseInt(req.params.count, 10) || 10, 1), 100);
-  Tx.find({ 'vout.currency': /^D/ }).sort({ _id: -1 }).limit(count * 2).exec(function(err, txs){
-    var out = [];
-    (txs || []).forEach(function(tx){
-      (tx.vout || []).forEach(function(o){
-        if (o.currency && o.currency.length === 3 && o.currency.charAt(0) === 'D' && o.address) {
-          var from = null;
-          (tx.vin || []).forEach(function(v){ if (v.currency === o.currency && v.address) from = v.address; });
-          out.push({ ticker: o.currency, from: from, to: o.address, block: tx.blockindex, txid: tx.txid, timestamp: tx.timestamp, fees: tx.fees });
-        }
+  load_deck(function(cards){
+    var all = [];
+    for (var t in cards) {
+      if (!Object.prototype.hasOwnProperty.call(cards, t)) continue;
+      (cards[t].transfers || []).forEach(function(x){
+        all.push({ ticker: t, from: x.from, to: x.to, block: x.block,
+                   txid: x.txid, timestamp: x.timestamp });
       });
+    }
+    // Newest first. Several cards can move in one block, and within a block
+    // there is no meaningful order, so txid breaks the tie deterministically
+    // rather than leaving it to iteration order.
+    all.sort(function(a, b){
+      if (b.block !== a.block) return b.block - a.block;
+      if ((b.timestamp || 0) !== (a.timestamp || 0)) {
+        return (b.timestamp || 0) - (a.timestamp || 0);
+      }
+      return a.txid < b.txid ? -1 : (a.txid > b.txid ? 1 : 0);
     });
-    res.send({ data: out.slice(0, count) });
+    res.send({ data: all.slice(0, count) });
   });
 });
 
