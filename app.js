@@ -382,37 +382,79 @@ app.use('/ext/getsupply/:coin', function(req,res){
 // collection, so recent blocks are aggregated from the most-recently-indexed
 // transactions. "forger" is the coinstake recipient (an output paying back a
 // vin address) when present, else the first output — a best-effort staker/miner.
-app.use('/ext/getlastblocks/:count', function(req,res){
-  var count = Math.min(Math.max(parseInt(req.params.count, 10) || 10, 1), 100);
-  Tx.find().sort({ _id: -1 }).limit(count * 12).exec(function(err, txs){
-    if (err || !txs) return res.send({ data: [] });
-    var seen = {}, order = [];
+// Blocks, read from the chain.
+//
+// Iquidus keeps no block collection, so both of these used to reconstruct
+// blocks from the transaction index: getlastblocks by grouping recent txs, and
+// getblockpage by taking Tx.distinct('blockindex'). The latter never worked at
+// this chain length -- roughly 1.5 million distinct integers exceed MongoDB's
+// 16 MB cap for a distinct result, the driver error was discarded, and the
+// Blocks page has been reporting "No blocks indexed yet" ever since.
+//
+// getblockbynumber(h, true) answers all of it in one call per block: height,
+// hash, time, proof type, the transaction list, and enough of each transaction
+// to name the forger.
+function read_block(height, cb) {
+  rpc.call('getblockbynumber', {number: height, txinfo: true}, function(b){
+    if (!b || typeof b !== 'object' || b.height === undefined) return cb(null);
+    // The forger is the coinstake's input address on a PoS block, and the
+    // coinbase's first output on a PoW one.
+    var forger = null, stake = false;
+    var txs = b.tx || [];
     for (var i = 0; i < txs.length; i++) {
-      var t = txs[i], h = t.blockindex;
-      if (h == null) continue;
-      if (seen[h] === undefined) {
-        seen[h] = { height: h, blockhash: t.blockhash, timestamp: t.timestamp, txns: 0, forger: null, stake: false };
-        order.push(h);
+      var t = txs[i];
+      if (typeof t !== 'object') continue;
+      if (t.flags === 'coinstake') {
+        stake = true;
+        if (t.vin && t.vin[0] && t.vin[0].addresses) forger = t.vin[0].addresses[0];
+        break;
       }
-      var b = seen[h];
-      b.txns++;
-      if (t.timestamp && (!b.timestamp || t.timestamp > b.timestamp)) b.timestamp = t.timestamp;
-      if (!b.stake) {
-        var vinA = (t.vin || []).map(function(v){ return v.address; });
-        var so = (t.vout || []).filter(function(o){ return o.address && vinA.indexOf(o.address) >= 0; })[0];
-        if (so) { b.forger = so.address; b.stake = true; }
-        else if (!b.forger && t.vout && t.vout[0]) b.forger = t.vout[0].address;
+      if (t.flags === 'coinbase' && !forger && t.vout && t.vout[0] &&
+          t.vout[0].scriptPubKey && t.vout[0].scriptPubKey.addresses) {
+        forger = t.vout[0].scriptPubKey.addresses[0];
       }
     }
-    var out = order.sort(function(a,b){ return b - a; }).slice(0, count).map(function(h){ return seen[h]; });
-    res.send({ data: out });
+    return cb({ height: b.height, blockhash: b.hash, timestamp: b.time,
+                txns: txs.length, forger: forger, stake: stake });
+  });
+}
+
+// Read a descending run of blocks, newest first, skipping any that fail.
+function read_blocks(from, count, cb) {
+  var out = [], h = from, remaining = count;
+  (function next(){
+    if (remaining <= 0 || h < 0) return cb(out);
+    read_block(h, function(b){
+      if (b) out.push(b);
+      h--; remaining--;
+      next();
+    });
+  })();
+}
+
+app.use('/ext/getlastblocks/:count', function(req,res){
+  var count = Math.min(Math.max(parseInt(req.params.count, 10) || 10, 1), 100);
+  lib.get_blockcount(function(tip){
+    if (typeof tip !== 'number') return res.send({ data: [] });
+    read_blocks(tip, count, function(blocks){ res.send({ data: blocks }); });
   });
 });
 
 // single transaction, straight from the index (vin/vout already currency-tagged).
+// Transaction, assembled from the daemon rather than read from the index.
+//
+// Same assembly the indexer uses (lib.assemble_tx), so the response does not
+// depend on whether the transaction has been indexed yet. The Mongo-internal
+// _id and __v fields are no longer present; nothing consumed them.
 app.use('/ext/gettx/:txid', function(req,res){
-  db.get_tx(req.params.txid, function(tx){
-    res.send(tx ? tx : { error: 'transaction not found', txid: req.params.txid });
+  var txid = req.params.txid;
+  lib.get_rawtransaction(txid, function(rtx){
+    if (!rtx || !rtx.txid) {
+      return res.send({ error: 'transaction not found', txid: txid });
+    }
+    lib.get_block(rtx.blockhash, function(block){
+      lib.assemble_tx(rtx, block, function(tx){ res.send(tx); });
+    });
   });
 });
 
@@ -453,27 +495,19 @@ app.use('/ext/gettxpage/:filter/:page', function(req,res){
 // with txns/timestamp/forger from the txs of just that page's heights.
 app.use('/ext/getblockpage/:page', function(req,res){
   var per = 25, page = Math.max(1, parseInt(req.params.page, 10) || 1);
-  Tx.distinct('blockindex', function(e0, all){
-    var heightsAll = (all || []).filter(function(h){ return h != null; }).sort(function(a,b){ return b - a; });
-    var total = heightsAll.length, pages = Math.max(1, Math.ceil(total / per));
-    var heights = heightsAll.slice((page - 1) * per, (page - 1) * per + per);
-    if (!heights.length) return res.send({ page: page, per: per, total: total, pages: pages, data: [] });
-    Tx.find({ blockindex: { $in: heights } }).exec(function(e2, txs){
-        var seen = {};
-        (txs || []).forEach(function(t){
-          var h = t.blockindex;
-          if (!seen[h]) seen[h] = { height: h, blockhash: t.blockhash, timestamp: t.timestamp, txns: 0, forger: null, stake: false };
-          var b = seen[h]; b.txns++;
-          if (t.timestamp && (!b.timestamp || t.timestamp > b.timestamp)) b.timestamp = t.timestamp;
-          if (!b.stake) {
-            var vinA = (t.vin || []).map(function(v){ return v.address; });
-            var so = (t.vout || []).filter(function(o){ return o.address && vinA.indexOf(o.address) >= 0; })[0];
-            if (so) { b.forger = so.address; b.stake = true; }
-            else if (!b.forger && t.vout && t.vout[0]) b.forger = t.vout[0].address;
-          }
-        });
-        res.send({ page: page, per: per, total: total, pages: pages, data: heights.map(function(h){ return seen[h]; }).filter(Boolean) });
-      });
+  lib.get_blockcount(function(tip){
+    if (typeof tip !== 'number') {
+      return res.send({ page: page, per: per, total: 0, pages: 1, data: [] });
+    }
+    var total = tip + 1;                       // genesis is block 0
+    var pages = Math.max(1, Math.ceil(total / per));
+    var from = tip - (page - 1) * per;
+    if (from < 0) {
+      return res.send({ page: page, per: per, total: total, pages: pages, data: [] });
+    }
+    read_blocks(from, Math.min(per, from + 1), function(blocks){
+      res.send({ page: page, per: per, total: total, pages: pages, data: blocks });
+    });
   });
 });
 

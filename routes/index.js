@@ -37,57 +37,40 @@ function route_get_block(res, blockhash) {
 }
 /* GET functions */
 
+// The transaction page reads the daemon directly.
+//
+// There used to be two paths here: the indexed one, which read the stored
+// document, and a fallback that rebuilt a partial view for transactions the
+// index had not reached. The fallback omitted fees, burnt and total, so an
+// unconfirmed transaction rendered a quietly different page from a confirmed
+// one. lib.assemble_tx produces the whole document either way, from the same
+// code the indexer uses, so there is only one path now.
 function route_get_tx(res, txid) {
   if (txid == settings.genesis_tx) {
-    route_get_block(res, settings.genesis_block);
-  } else {
-    db.get_tx(txid, function(tx) {
-      if (tx) {
-        lib.get_blockcount(function(blockcount) {
-          res.render('tx', { active: 'tx', tx: tx, confirmations: settings.confirmations, blockcount: blockcount});
-        });
-      }
-      else {
-        lib.get_rawtransaction(txid, function(rtx) {
-          if (rtx.txid) {
-            lib.prepare_vin(rtx, function(vin) {
-              lib.prepare_vout(rtx.vout, rtx.txid, vin, function(rvout, rvin) {
-                lib.calculate_totals(rvout, rtx.flags, function(totals){
-                  if (!rtx.confirmations > 0) {
-                    var utx = {
-                      txid: rtx.txid,
-                      vin: rvin,
-                      vout: rvout,
-                      totals: totals,
-                      timestamp: rtx.time,
-                      blockhash: '-',
-                      blockindex: -1,
-                    };
-                    res.render('tx', { active: 'tx', tx: utx, confirmations: settings.confirmations, blockcount:-1});
-                  } else {
-                    var utx = {
-                      txid: rtx.txid,
-                      vin: rvin,
-                      vout: rvout,
-                      totals: totals,
-                      timestamp: rtx.time,
-                      blockhash: rtx.blockhash,
-                      blockindex: rtx.blockheight,
-                    };
-                    lib.get_blockcount(function(blockcount) {
-                      res.render('tx', { active: 'tx', tx: utx, confirmations: settings.confirmations, blockcount: blockcount});
-                    });
-                  }
-                });
-              });
-            });
-          } else {
-            route_get_index(res, null);
-          }
-        });
-      }
-    });
+    return route_get_block(res, settings.genesis_block);
   }
+  lib.get_rawtransaction(txid, function(rtx) {
+    if (!rtx || !rtx.txid) {
+      return route_get_index(res, null);
+    }
+    if (!rtx.blockhash) {
+      // still in the mempool: no confirming block, so no height
+      return lib.assemble_tx(rtx, null, function(tx) {
+        tx.blockhash = '-';
+        res.render('tx', { active: 'tx', tx: tx,
+                           confirmations: settings.confirmations, blockcount: -1 });
+      });
+    }
+    lib.get_block(rtx.blockhash, function(block) {
+      lib.assemble_tx(rtx, block, function(tx) {
+        lib.get_blockcount(function(blockcount) {
+          res.render('tx', { active: 'tx', tx: tx,
+                             confirmations: settings.confirmations,
+                             blockcount: blockcount });
+        });
+      });
+    });
+  });
 }
 
 function route_get_index(res, error) {
