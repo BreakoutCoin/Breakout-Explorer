@@ -626,25 +626,42 @@ app.use('/ext/getbalancedist', function(req,res){
 // a stake handing its principal back to itself does not qualify, and neither
 // does a large change output returning to a sender.
 //
-// The cutoff is a query parameter, not a property of the index, so
-// settings.movement.min_amount can be retuned without touching the daemon --
-// as long as it stays at or above the floor the index was built with.
+// The cutoff is per currency and lives in the daemon (MovementFloor), set at
+// about 0.01% of each supply so that "notable" means a comparable share
+// whichever currency moved. The response reports the floors in force, so
+// nothing here has to keep a copy of them.
 app.use('/ext/getmovement/:filter/:page', function(req,res){
   var per = 12, page = Math.max(1, parseInt(req.params.page, 10) || 1);
   var f = (req.params.filter || 'all').toUpperCase();
   var color = (f === 'ALL' || f === '') ? 0 : (currs.color(f) || 0);
-  var mincoins = settings.movement.min_amount || 100;
-  var TH = mincoins * settings.toshis;
 
-  function empty(){
-    res.send({ page: page, per: per, total: 0, pages: 1, threshold: TH, data: [] });
+  function empty(TH){
+    res.send({ page: page, per: per, total: 0, pages: 1,
+               threshold: TH || 0, data: [] });
   }
 
+  // No cutoff is passed: the floors live in the daemon, per currency, and are
+  // what "notable" means for each. Passing one here would only filter harder.
   rpc.call('getmovementspg',
-           {page: page, perpage: per, ordering: false,
-            mincoins: mincoins, color: color},
+           {page: page, perpage: per, ordering: false, color: color},
            function(r){
     if (!r || typeof r !== 'object' || !r.data) return empty();
+
+    // The view shows "no transfers over N"; N is the floor in force. For a
+    // single currency that is its own floor, and for the combined view the
+    // lowest of them, since anything above that could appear.
+    var floors = r.floors || {};
+    var floor;
+    if (f !== 'ALL' && f !== '') {
+      floor = floors[f] || 0;
+    } else {
+      floor = 0;
+      for (var t in floors) {
+        if (!Object.prototype.hasOwnProperty.call(floors, t)) continue;
+        if (floor === 0 || floors[t] < floor) floor = floors[t];
+      }
+    }
+    var TH = floor * settings.toshis;
 
     // The index says which transactions; the transactions themselves still
     // come from the daemon, so the response keeps the shape the movement view
@@ -653,7 +670,8 @@ app.use('/ext/getmovement/:filter/:page', function(req,res){
     (function next(){
       if (i >= rows.length) {
         return res.send({ page: r.page, per: r.per_page, total: r.total,
-                          pages: r.last_page, threshold: TH, data: out });
+                          pages: r.last_page, threshold: TH,
+                          floors: floors, data: out });
       }
       var txid = rows[i].txid;
       lib.get_rawtransaction(txid, function(rtx){
