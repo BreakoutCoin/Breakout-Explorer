@@ -640,10 +640,13 @@ app.use('/ext/getmovement/:filter/:page', function(req,res){
                threshold: TH || 0, data: [] });
   }
 
-  // No cutoff is passed: the floors live in the daemon, per currency, and are
-  // what "notable" means for each. Passing one here would only filter harder.
+  // mincoins is 0, not omitted: the floors live in the daemon, per currency,
+  // and 0 means "apply no cutoff beyond them". It has to be passed explicitly
+  // because JSON-RPC params are positional -- leaving a hole at mincoins while
+  // supplying color would shift color into its place, so lib/rpc.js refuses
+  // the call outright rather than send it.
   rpc.call('getmovementspg',
-           {page: page, perpage: per, ordering: false, color: color},
+           {page: page, perpage: per, ordering: false, mincoins: 0, color: color},
            function(r){
     if (!r || typeof r !== 'object' || !r.data) return empty();
 
