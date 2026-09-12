@@ -130,19 +130,13 @@
   @media(max-width:760px){.richtable th.amt,.richtable td.amt{text-align:left}}
   .coin-activity > .sec{margin:0}
   @media(max-width:1000px){.coin-activity{grid-template-columns:1fr}}
-  /* Rich list page: the balance distribution sits beside the list rather than
-     under it. The bars stay readable at this width, and the counts printed
-     beside them carry the detail anyway. */
-  .richsplit{display:grid;grid-template-columns:minmax(280px,380px) 1fr;gap:20px;margin:20px 0;align-items:start}
-  .richsplit > .sec{margin:0}
-  /* A grid item's automatic minimum size is its min-content width, and the
-     34-character addresses in the list are unbreakable -- without this they
-     widen the track past its declared size (see MOBILE-FIX-2026-07-10). */
-  .richsplit > *{min-width:0}
-  /* narrower label and count only while the two panes are actually side by
-     side, so the mobile .distrow rules below are left alone */
-  @media(min-width:1281px){.richsplit .distrow{grid-template-columns:118px 1fr 72px;gap:10px}}
-  @media(max-width:1280px){.richsplit{grid-template-columns:1fr}}
+  /* Rich list page: the two bar charts share a row above the list. They are
+     the same kind of thing read the same way, so they get equal width. */
+  .distsplit{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin:20px 0;align-items:start}
+  .distsplit > .sec{margin:0}
+  @media(max-width:1000px){.distsplit{grid-template-columns:1fr}}
+  /* page-level currency filter, under the title rather than inside a pane */
+  .pagefilter{margin:16px 0 0}
   .panel .h{background:var(--bg-2);border-bottom:1px solid var(--border);padding:11px 16px}
   .panel .b{padding:20px 16px;text-align:center;font-family:var(--display);font-size:34px}
   .sec{background:linear-gradient(to bottom,var(--bg-1),var(--bg));border:1px solid var(--border);border-radius:4px;margin:20px 0}
@@ -964,8 +958,12 @@ async function renderRichList(p){
   pg=Math.max(1,pg);
   const col=CCCOLOR[ccy];
   const el=document.getElementById('pg-richlist');
-  const head=`<div class="pagehead">${crumb([['Explorer','#/'],['Rich list',null]])}</div><h1 class="ptitle"><span class="ttx">Rich list</span> ${badge(ccy)}</h1>`;
-  el.innerHTML=head+`<div class="sec"><div class="h">${ccyFilterBar(ccy,'#/richlist/',false)}</div><div class="empty">Loading distribution…</div></div>`;
+  // The filter is a page control -- it drives both charts and the list -- so it
+  // sits under the title rather than in one pane's header.
+  const head=`<div class="pagehead">${crumb([['Explorer','#/'],['Rich list',null]])}</div>`
+    +`<h1 class="ptitle"><span class="ttx">Rich list</span> ${badge(ccy)}</h1>`
+    +`<div class="pagefilter">${ccyFilterBar(ccy,'#/richlist/',false,true)}</div>`;
+  el.innerHTML=head+`<div class="sec"><div class="empty">Loading distribution…</div></div>`;
   // per-coin distribution + balance buckets from the AddressBalance side-collection (all coins; fills in after a reindex)
   const [dist,bal,rich]=await Promise.all([fetchJSON('/ext/getcoindist/'+ccy),fetchJSON('/ext/getcoinbuckets/'+ccy),
                                            fetchJSON('/ext/getrichlistpg/'+ccy+'/'+pg+'?per='+RICH_PER)]);
@@ -992,19 +990,19 @@ async function renderRichList(p){
       +`</tr>`;
   }).join(''):`<tr><td colspan="4"><div class="empty">No ${ccy} balances on this page.</div></td></tr>`;
   el.innerHTML=head+`
-    <div class="sec"><div class="h">${ccyFilterBar(ccy,'#/richlist/',false,true)}<span class="label">${CCNAME[ccy]} · supply distribution</span></div>
-      <div style="padding:5px 0">${tierRows}</div>
-      <div class="pagenote">Share of total supply held by each holder tier.${topEmpty?' <span class="dim">Per-currency balances populate after a reindex — tiers fill in once it completes.</span>':''}</div>
-    </div>
-    <div class="richsplit">
+    <div class="distsplit">
+      <div class="sec"><div class="h"><span class="ttl">Supply distribution</span><span class="label">${CCNAME[ccy]} · by holder tier</span></div>
+        <div style="padding:5px 0">${tierRows}</div>
+        <div class="pagenote">Share of total supply held by each holder tier.${topEmpty?' <span class="dim">Per-currency balances populate after a reindex — tiers fill in once it completes.</span>':''}</div>
+      </div>
       <div class="sec"><div class="h"><span class="ttl">Balance distribution</span><span class="label">addresses by balance</span></div>
         <div style="padding:5px 0">${bRows}</div>
       </div>
-      <div class="sec"><div class="h"><span class="ttl">Top ${ccy} addresses</span><span class="label">${grpInt(rlTotal)} holders · ranked by balance</span></div>
-        <div class="tscroll"><table class="stack richtable"><thead><tr><th>Rank</th><th>Address</th><th class="amt">Balance (${ccy})</th><th class="amt">Share</th></tr></thead><tbody>${rlRows}</tbody></table></div>
-        ${pager(pg,rlPages,'#/richlist/'+ccy+'/')}
-        <div class="pagenote">Balances below one cent of a currency are not tracked by the node, so they do not appear here and are not counted in the holder total.</div>
-      </div>
+    </div>
+    <div class="sec"><div class="h"><span class="ttl">Top ${ccy} addresses</span><span class="label">${grpInt(rlTotal)} holders · ranked by balance</span></div>
+      <div class="tscroll"><table class="stack richtable"><thead><tr><th>Rank</th><th>Address</th><th class="amt">Balance (${ccy})</th><th class="amt">Share</th></tr></thead><tbody>${rlRows}</tbody></table></div>
+      ${pager(pg,rlPages,'#/richlist/'+ccy+'/')}
+      <div class="pagenote">Balances below one cent of a currency are not tracked by the node, so they do not appear here and are not counted in the holder total.</div>
     </div>`;
   if(window.__decode)window.__decode(el);
 }
