@@ -1,3 +1,15 @@
+3.1.0
+* /ext serves addresses, rich list, supply, distribution, transactions, blocks, movement and the Deck from the daemon's indexes
+* movement ignores stake self-returns and change back to a sender; the cutoff follows settings.movement.min_amount
+* removed MongoDB
+* retired the Jade UI and the transaction views; the UI is public/thedeck.html
+* rich list lists addresses, with the balance distribution charts beside it
+* bounded idle RPC keep-alive connections
+* version shown in the footer
+
+3.0
+* Breakout Explorer: multicurrency (BRK, BRX, SIS, The Deck) snapshot of the deployed tree
+
 1.6.1
 * fixed last_txs setting
 * added hashrate_units setting
