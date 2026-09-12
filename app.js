@@ -8,12 +8,11 @@ var express = require('express')
   , settings = require('./lib/settings')
   , routes = require('./routes/index')
   , lib = require('./lib/explorer')
-  , db = require('./lib/database')
   , locale = require('./lib/locale')
   , request = require('request')
   , rpc = require('./lib/rpc')
   , currs = require('./lib/currencies')
-  , Tx = require('./models/tx');
+  ;
 
 var app = express();
 
@@ -67,9 +66,8 @@ if (settings.heavy != true) {
     'getnextrewardwhensec', 'getsupply', 'gettxoutsetinfo'
     ].concat(explore_api_methods));
 }
-// view engine setup
-app.set('views', path.join(__dirname, 'views'));
-app.set('view engine', 'jade');
+// No view engine: the UI is public/thedeck.html, served statically. The Jade
+// templates it replaced are gone, along with the routes that rendered them.
 
 app.use(favicon(path.join(__dirname, settings.favicon)));
 app.use(logger('dev'));
@@ -203,23 +201,13 @@ app.use('/ext/getdistribution', function(req,res){
   });
 });
 
-app.use('/ext/getlasttxs/:min', function(req,res){
-  db.get_last_txs(settings.index.last_txs, (req.params.min * settings.toshis), function(txs){
-    res.send({data: txs});
-  });
-});
-
 app.use('/ext/connections', function(req,res){
   // Read peers LIVE from the node (getpeerinfo) on every request, so the Network page
   // shows whatever the wallet is actually connected to right now — the current peers and
   // any new ones the moment they connect. (The Mongo `peers` collection is only filled by
   // Iquidus's separate peers-sync cron, which isn't running here, so it read empty.)
-  var peerUri = 'http://' + (process.env.EXPLORER_API_HOST || '127.0.0.1') + ':' + settings.port + '/api/getpeerinfo';
-  request({uri: peerUri, json: true, timeout: 5000}, function(err, resp, body){
-    if (err || !Array.isArray(body)) {
-      // node call failed — fall back to whatever the DB collection has (may be empty)
-      return db.get_peers(function(peers){ res.send({data: peers || []}); });
-    }
+  rpc.call('getpeerinfo', function(body){
+    if (!Array.isArray(body)) return res.send({data: []});
     var peers = body.map(function(p){
       return {
         address:  p.addr,                                              // e.g. <onion>:11698
@@ -240,16 +228,13 @@ app.use('/ext/connections', function(req,res){
 app.use('/ext/getcoinstats/:coin', function(req,res){
   var coin = (req.params.coin || '').toUpperCase();
   var color = currs.color(coin);
-  // txcount still comes from the tx index: the Explore API is address-scoped
-  // and has no per-currency transaction count.
-  Tx.count({ 'vout.currency': coin }, function(err, txcount){
-    lib.get_moneysupply(coin, function(supply){
-      rpc.call('getrichlistsize', {color: color}, function(holders){
-        res.send({ coin: coin,
-                   txcount: (err ? 0 : (txcount || 0)),
-                   holders: (typeof holders === 'number' ? holders : 0),
-                   supply: supply || 0 });
-      });
+  // No txcount: it was the one figure here that needed a transaction index,
+  // and the front page shows unique addresses instead (see /ext/summary).
+  lib.get_moneysupply(coin, function(supply){
+    rpc.call('getrichlistsize', {color: color}, function(holders){
+      res.send({ coin: coin,
+                 holders: (typeof holders === 'number' ? holders : 0),
+                 supply: supply || 0 });
     });
   });
 });
@@ -415,7 +400,11 @@ function read_block(height, cb) {
       }
     }
     return cb({ height: b.height, blockhash: b.hash, timestamp: b.time,
-                txns: txs.length, forger: forger, stake: stake });
+                txns: txs.length, forger: forger, stake: stake,
+                // the block's mint and its currency, for the reward column
+                mint: (b.mint != null ? b.mint : null),
+                mintCurrency: b['mint currency'] || null,
+                difficulty: (b.difficulty != null ? b.difficulty : null) });
   });
 }
 
@@ -460,33 +449,34 @@ app.use('/ext/gettx/:txid', function(req,res){
 
 // block by height — resolves height->hash->block over RPC, then attaches the
 // block's indexed transactions (with per-currency vout values) from Mongo.
+// Block by height, with its transactions.
+//
+// getblockbynumber(h, true) returns the block with its transactions already
+// expanded and their inputs resolved, so both halves come from one call and
+// the transactions are assembled the same way /ext/gettx assembles them.
 app.use('/ext/getblock/:height', function(req,res){
   var h = parseInt(req.params.height, 10);
   if (isNaN(h)) return res.send({ error: 'bad height', height: req.params.height });
-  var ERRSTR = 'There was an error. Check your console.';
-  lib.get_blockhash(h, function(hash){
-    if (!hash || hash == ERRSTR) return res.send({ error: 'block not found', height: h });
-    lib.get_block(hash, function(block){
-      if (!block || block == ERRSTR) return res.send({ error: 'block not found', height: h });
-      db.get_txs(block, function(txs){
-        res.send({ block: block, txs: (txs || []) });
-      });
-    });
-  });
-});
-
-// paged transactions (25/page) — real skip/limit over the whole tx index, so the
-// pager walks back through all history. filter = all | BRK | BRX | SIS | cards.
-app.use('/ext/gettxpage/:filter/:page', function(req,res){
-  var per = 25, page = Math.max(1, parseInt(req.params.page, 10) || 1);
-  var f = (req.params.filter || 'all').toLowerCase(), query = {};
-  if (f === 'cards') query = { 'vout.currency': /^D/ };
-  else if (f !== 'all') query = { 'vout.currency': (req.params.filter || '').toUpperCase() };
-  Tx.count(query, function(err, total){
-    total = total || 0;
-    Tx.find(query).sort({ _id: -1 }).skip((page - 1) * per).limit(per).exec(function(e2, txs){
-      res.send({ page: page, per: per, total: total, pages: Math.max(1, Math.ceil(total / per)), data: (txs || []) });
-    });
+  rpc.call('getblockbynumber', {number: h, txinfo: true}, function(block){
+    if (!block || typeof block !== 'object' || block.height === undefined) {
+      return res.send({ error: 'block not found', height: h });
+    }
+    var raw = block.tx || [], txs = [], i = 0;
+    (function next(){
+      if (i >= raw.length) {
+        // the tx array on the returned block stays a list of ids, as before
+        var hdr = {};
+        for (var k in block) {
+          if (Object.prototype.hasOwnProperty.call(block, k)) hdr[k] = block[k];
+        }
+        hdr.tx = raw.map(function(t){ return (typeof t === 'object') ? t.txid : t; });
+        return res.send({ block: hdr, txs: txs });
+      }
+      var t = raw[i];
+      if (typeof t !== 'object') { i++; return next(); }
+      t.blockhash = block.hash;
+      lib.assemble_tx(t, block, function(tx){ txs.push(tx); i++; next(); });
+    })();
   });
 });
 

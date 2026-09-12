@@ -114,6 +114,14 @@
   .coin-core img{width:122px;height:122px;border-radius:50%;box-shadow:0 0 0 7px var(--bg),0 0 0 8px color-mix(in srgb,var(--cc) 60%,transparent),0 0 32px 6px color-mix(in srgb,var(--cc) 45%,transparent)}
   @media(max-width:900px){.stats{grid-template-columns:1fr 1fr}.coin-core{position:static;transform:none;grid-column:1/-1;order:-1}.coin-core::before{display:none}.stats .panel.inner-l,.stats .panel.inner-r{border-radius:8px;box-shadow:none}}
   .coin-activity{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:20px}
+  .coin-activity.one{grid-template-columns:1fr}
+  /* proof type: PoW and PoS read at a glance without a legend */
+  .btype{font-size:11px;letter-spacing:.06em;border:1px solid var(--border);border-radius:3px;padding:1px 6px}
+  .btype.pos{color:var(--brx);border-color:var(--brx)}
+  .btype.pow{color:var(--sis);border-color:var(--sis)}
+  /* truncated hash plus its copy button, kept on one line */
+  .bhash{display:inline-flex;align-items:center;white-space:nowrap}
+  .bhash .copybtn{margin-left:6px;padding:1px 6px;font-size:10px}
   .coin-activity > .sec{margin:0}
   @media(max-width:1000px){.coin-activity{grid-template-columns:1fr}}
   .panel .h{background:var(--bg-2);border-bottom:1px solid var(--border);padding:11px 16px}
@@ -404,7 +412,7 @@
 <header class="bar">
   <a class="brand" href="#/">Breakout Explorer</a>
   <button class="navtoggle" type="button" aria-label="Toggle navigation menu" aria-expanded="false"><span></span><span></span><span></span></button>
-  <nav class="top"><a class="active" href="#/">Explorer</a><a href="#/blocks">Blocks</a><a href="#/txs">Transactions</a><a href="#/movement">Movement</a><a href="#/network">Network</a><a href="#/richlist">Rich List</a><a href="#/api">API</a></nav>
+  <nav class="top"><a class="active" href="#/">Explorer</a><a href="#/blocks">Blocks</a><a href="#/movement">Movement</a><a href="#/network">Network</a><a href="#/richlist">Rich List</a><a href="#/api">API</a></nav>
   <form class="topsearch" onsubmit="return false">
     <span class="ts-prompt">›</span>
     <input type="text" placeholder="Search address · tx hash · block # · card">
@@ -423,19 +431,12 @@
   <!-- COIN VIEW -->
   <div id="coinView" style="display:block">
     <div class="stats" id="coinStats"></div>
-    <div class="coin-activity">
+    <div class="coin-activity one">
       <div class="sec">
         <div class="h"><span class="ttl">Latest blocks</span><span class="hctl"><span class="rowcount" data-for="blocks"><button type="button" data-n="10" class="on">10</button><button type="button" data-n="25">25</button><button type="button" data-n="50">50</button><button type="button" data-n="100">100</button></span><a class="label" href="#/blocks">view all ↗</a></span></div>
         <table class="stack">
-          <thead><tr><th>Block</th><th>Age</th><th>Txns</th><th>Forged by</th></tr></thead>
+          <thead><tr><th>Block</th><th>Time</th><th>Type</th><th>Reward</th><th>Hash</th><th>Txns</th><th>Forged by</th></tr></thead>
           <tbody id="blockbody"></tbody>
-        </table>
-      </div>
-      <div class="sec">
-        <div class="h"><span class="ttl" id="txTtl">Latest BRK transactions</span><span class="hctl"><span class="rowcount" data-for="txs"><button type="button" data-n="10" class="on">10</button><button type="button" data-n="25">25</button><button type="button" data-n="50">50</button><button type="button" data-n="100">100</button></span><a class="label" href="#/txs">view all ↗</a></span></div>
-        <table class="stack">
-          <thead><tr><th>Tx hash</th><th>Currency</th><th>Amount</th><th>Age</th></tr></thead>
-          <tbody id="txbody"></tbody>
         </table>
       </div>
     </div>
@@ -496,7 +497,6 @@
 
   <div class="page" id="pg-blocks" hidden></div>
   <div class="page" id="pg-block" hidden></div>
-  <div class="page" id="pg-txs" hidden></div>
   <div class="page" id="pg-tx" hidden></div>
   <div class="page" id="pg-address" hidden></div>
   <div class="page" id="pg-card" hidden></div>
@@ -521,7 +521,7 @@
         </div>
       </div>
       <div class="ftr-col"><div class="ftr-col-t">Explorer</div>
-        <a href="#/blocks">Blocks</a><a href="#/txs">Transactions</a><a href="#/richlist">Rich List</a><a href="#/network">Network</a><a href="#/api">API</a></div>
+        <a href="#/blocks">Blocks</a><a href="#/richlist">Rich List</a><a href="#/network">Network</a><a href="#/api">API</a></div>
       <div class="ftr-col"><div class="ftr-col-t">The Deck</div>
         <a class="ext" href="https://www.thedeck.rocks/gallery.html" target="_blank" rel="noopener">Card gallery</a><a class="ext" href="https://www.thedeck.rocks/architect.html" target="_blank" rel="noopener">Architect</a><a class="ext" href="https://www.thedeck.rocks/contributions.html" target="_blank" rel="noopener">Contributions</a></div>
       <div class="ftr-col"><div class="ftr-col-t">External</div>
@@ -741,7 +741,7 @@ const DECIMALS={BRK:8,BRX:8,SIS:8,DECK:0};
 function decFor(cur){ if(cur&&cur.length===3&&cur.charAt(0)==='D') return DECIMALS.DECK; return (DECIMALS[cur]!=null?DECIMALS[cur]:8); }
 function grpDec(n,dp){ n=Number(n); if(!isFinite(n)) return '—'; return n.toLocaleString('en-US',{minimumFractionDigits:dp,maximumFractionDigits:dp}).replace(/,/g,' '); }
 // amount (in coins) with its currency logo PREPENDED in a fixed-width column; decimals per DECIMALS
-function amtCur(value,cur){return `<span class="vc"><span class="vc-l">${badge(cur)}</span><span class="vc-a">${grpDec(value,decFor(cur))}</span></span>`;}
+function amtCur(value,cur,dp){return `<span class="vc"><span class="vc-l">${badge(cur)}</span><span class="vc-a">${grpDec(value,dp!=null?dp:decFor(cur))}</span></span>`;}
 const ccyAt=i=>COIN3[((i%3)+3)%3];
 const ccyBadge=i=>badge(ccyAt(i));
 
@@ -800,80 +800,13 @@ async function renderBlockDetail(p){const n=parseInt(p,10);if(isNaN(n)||n<0){loc
   if(window.__decode)window.__decode(el);
 }
 function ccyFilterBar(active,base,withCards){
-  base=base||'#/txs/';
+  base=base||'#/movement/';
   const opts=[['all','All'],['BRK','BRK'],['BRX','BRX'],['SIS','SIS']];
   if(withCards)opts.push(['cards','Cards']);
   const colOf={BRK:CCCOLOR.BRK,BRX:CCCOLOR.BRX,SIS:CCCOLOR.SIS,cards:'var(--amber)'};
   return `<div class="ccyfilter"><span class="label">Filter</span>`+opts.map(o=>{
     const on=o[0]===active,c=colOf[o[0]],style=on&&c?` style="border-color:${c};color:${c}"`:'';
     return `<a class="fbtn ${on?'on':''}"${style} href="${base}${o[0]}">${o[1]}</a>`;}).join('')+`</div>`;
-}
-async function renderTxList(p){p=p||'';const parts=p.split('/').filter(Boolean);let ccy='all',page=1;
-  if(parts.length){const raw=parts[0],f=raw.toLowerCase()==='cards'?'cards':raw.toUpperCase();
-    if(f==='cards'||f==='ALL'||COIN3.includes(f)){ccy=f==='ALL'?'all':f;if(parts[1])page=parseInt(parts[1],10)||1;}
-    else{page=parseInt(parts[0],10)||1;}}
-  page=Math.max(1,page);
-  const el=document.getElementById('pg-txs');
-  const head=`<div class="pagehead">${crumb([['Explorer','#/'],['Transactions',null]])}</div><h1 class="ptitle"><span class="ttx">Transactions</span></h1>`;
-  el.innerHTML=head+`<div class="sec"><div class="h">${ccyFilterBar(ccy,'#/txs/',true)}</div><div class="empty">Loading transactions…</div></div>`;
-  const r=await fetchJSON('/ext/gettxpage/'+ccy+'/'+page);
-  const data=(r&&r.data)||[],pages=(r&&r.pages)||1,total=(r&&r.total)||0;
-  const isDeckCur=c=>!!c&&c.length===3&&c[0]==='D';
-  const feeCell=fees=>{const f=(fees||[]).filter(x=>Number(x[1])>0);return f.length?f.map(x=>amtCur(Number(x[1])/1e8,x[0])).join(''):'<span class="dim">—</span>';};
-  let thead,rows,subtitle;
-  if(ccy==='cards'){
-    const moves=[];
-    data.forEach(t=>{(t.vout||[]).forEach(o=>{if(isDeckCur(o.currency))moves.push({tk:o.currency,to:o.address,blk:t.blockindex,hash:t.txid,fees:t.fees});});});
-    thead=`<tr><th>Tx hash</th><th>Asset</th><th>From</th><th>To</th><th>Block</th><th>Fee</th></tr>`;
-    rows=moves.length?moves.map(m=>`<tr><td data-label="Tx hash">${aTxLive(m.hash,'DECK/'+m.tk)}</td><td data-label="Asset"><a class="hash" href="#/card/${m.tk}" style="display:inline-flex;align-items:center"><img class="micard" src="/images/cards/${m.tk}.png" alt="${m.tk}"><span class="mtk">${m.tk} · 1/1</span></a></td><td data-label="From"><span class="dim">—</span></td><td data-label="To">${m.to?aAddrLive(m.to):'—'}</td><td data-label="Block">${aBlock(m.blk)}</td><td class="amt" data-label="Fee">${feeCell(m.fees)}</td></tr>`).join(''):`<tr><td colspan="6"><div class="empty">No Deck card transfers on this page.</div></td></tr>`;
-    subtitle='The Deck · NFT transfers · sender resolved per-card (see card page)';
-  } else {
-    thead=`<tr><th>Tx hash</th><th>Block</th><th>Value</th><th>In / Out</th><th>Fee</th><th>Timestamp</th></tr>`;
-    rows=data.length?data.map(t=>{
-      const totals=(t.totals&&t.totals.length)?t.totals:[[(t.vout&&t.vout[0]&&t.vout[0].currency)||'BRK',String(t.total||0)]];
-      const shown=ccy==='all'?totals:totals.filter(x=>x[0]===ccy);
-      const val=shown.map(x=>amtCur(Number(x[1])/1e8,x[0])).join('');
-      return `<tr><td data-label="Tx hash">${aTxLive(t.txid,shown[0]&&shown[0][0])}</td><td data-label="Block">${t.blockindex!=null?aBlock(t.blockindex):'—'}</td><td data-label="Value">${val}</td><td class="dim" data-label="In / Out">${(t.vin||[]).length} / ${(t.vout||[]).length}</td><td data-label="Fee">${feeCell(t.fees)}</td><td class="dim" data-label="Timestamp">${t.timestamp?tsReal(t.timestamp):'—'}</td></tr>`;
-    }).join(''):`<tr><td colspan="6"><div class="empty">No ${ccy==='all'?'':ccy+' '}transactions on this page.</div></td></tr>`;
-    subtitle=(ccy==='all'?'All currencies':CCNAME[ccy])+' · '+grpInt(total)+' total · newest first';
-  }
-  el.innerHTML=head+`
-    <div class="sec"><div class="h">${ccyFilterBar(ccy,'#/txs/',true)}<span class="label">${subtitle}</span></div>
-      <table class="stack"><thead>${thead}</thead><tbody>${rows}</tbody></table>
-      ${pager(page,pages,'#/txs/'+ccy+'/')}
-    </div>`;
-  if(window.__decode)window.__decode(el);
-}
-async function renderCardTxDetail(tkRaw,hRaw){const tk=(tkRaw||'').toUpperCase(),h=decodeURIComponent(hRaw||'');
-  const c=DECK.find(x=>x.tk===tk);const name=c?c.rankName+(c.suit!=='Joker'?' of '+c.suit:''):tk;
-  const asset=`<a class="hash" href="#/card/${tk}" style="display:inline-flex;align-items:center"><img class="micard" src="/images/cards/${tk}.png" alt="${tk}"><span class="cardname">${name}</span><span class="mtk">${tk} · 1/1</span></a>`;
-  const head=`<div class="pagehead">${crumb([['Explorer','#/'],['Transactions','#/txs/cards'],['tx',null]])}</div>
-    <h1 class="ptitle"><span class="ttx">Card transfer</span> ${badge(tk)}</h1>`;
-  const el=document.getElementById('pg-tx');
-  el.innerHTML=head+`<div class="sec"><div class="empty">Loading transfer…</div></div>`;
-  const tx=await fetchJSON('/ext/gettx/'+encU(h));
-  if(!tx||tx.error||!tx.txid){el.innerHTML=head+`<div class="sec"><div class="empty">No indexed transaction with hash “${esc(h)}”.</div></div>`;if(window.__decode)window.__decode(el);return;}
-  let from=null,to=null;
-  (tx.vin||[]).forEach(v=>{if(v.currency===tk&&v.address)from=v.address;});
-  (tx.vout||[]).forEach(o=>{if(o.currency===tk&&o.address)to=o.address;});
-  const isMint=!from||/coinbase/i.test(from);
-  const fee=(tx.fees&&tx.fees.length)?(tx.fees.filter(f=>Number(f[1])>0).map(f=>`${grpDec(Number(f[1])/1e8,decFor(f[0]))} ${badge(f[0])}`).join('<br>')||'<span class="dim">—</span>'):'<span class="dim">—</span>';
-  const rawT=`<a class="rawapi" href="/api/getrawtransaction?txid=${encodeURIComponent(tx.txid)}&decrypt=1" target="_blank" rel="noopener">{ } raw</a>`;
-  const headR=head.replace('</h1>','<span class="entnav">'+rawT+'</span></h1>');
-  el.innerHTML=headR+`
-    <div class="sec"><div class="h"><span class="ttl">Summary</span></div>
-      <div class="kv">
-        <div class="k">Tx hash</div><div class="v mono" style="word-break:break-all">${esc(tx.txid)}${copyBtn(tx.txid)}</div>
-        <div class="k">Asset</div><div class="v">${asset}</div>
-        <div class="k">Amount</div><div class="v">1 / 1</div>
-        <div class="k">From</div><div class="v">${isMint?'<span class="dim">⟲ mint · newly issued</span>':aAddr(from)}</div>
-        <div class="k">To</div><div class="v">${to?aAddr(to):'<span class="dim">—</span>'}</div>
-        <div class="k">Block</div><div class="v">${tx.blockindex!=null?aBlock(tx.blockindex):'<span class="dim">unconfirmed</span>'}</div>
-        <div class="k">Timestamp</div><div class="v">${tx.timestamp?tsReal(tx.timestamp):'—'}</div>
-        <div class="k">Fee</div><div class="v amt">${fee}</div>
-      </div>
-    </div>`;
-  if(window.__decode)window.__decode(el);
 }
 async function renderTxDetail(p){p=p||'';const parts=p.split('/');
   if(parts[0]&&parts[0].toUpperCase()==='DECK'){return renderCardTxDetail(parts[1],parts.slice(2).join('/'));}
@@ -883,7 +816,7 @@ async function renderTxDetail(p){p=p||'';const parts=p.split('/');
   if(parts.length>1&&parts[0].length===3&&parts[0].charAt(0).toUpperCase()==='D'&&!COIN3.includes(parts[0].toUpperCase())){return renderCardTxDetail(parts[0],parts.slice(1).join('/'));}
   let ccy='',h='';
   if(parts.length>1&&COIN3.includes(parts[0].toUpperCase())){ccy=parts[0].toUpperCase();h=decodeURIComponent(parts.slice(1).join('/'));}else{h=decodeURIComponent(p);}
-  const head=`<div class="pagehead">${crumb([['Explorer','#/'],['Transactions','#/txs'],['tx',null]])}</div>
+  const head=`<div class="pagehead">${crumb([['Explorer','#/'],['tx',null]])}</div>
     <h1 class="ptitle"><span class="ttx">Transaction</span> ${ccy?badge(ccy):''}</h1>`;
   const el=document.getElementById('pg-tx');
   el.innerHTML=head+`<div class="sec"><div class="empty">Loading transaction…</div></div>`;
@@ -1110,9 +1043,11 @@ function renderApi(){
     ['GET','/api/getrawtransaction?txid={id}&decrypt=1','Decoded transaction','{ "txid": "d399…", "vout": [ … ] }'],
     ['GET','/ext/getaddress/{address}','Address balance + history','{ "balance": 12480.5, "txs": [ … ] }'],
     ['GET','/ext/getbalance/{address}','Address balance only','12480.50000000'],
-    ['GET','/ext/getmoneysupply/{coin}','Coin total supply','24065245'],
+    ['GET','/ext/getsupply/{coin}','Coin total supply','24065245'],
+    ['GET','/ext/getholders/{coin}','Holder count + top 100','{ "holders": 6815, "top": [ … ] }'],
     ['GET','/ext/getdistribution/{coin}','Wealth distribution tiers','{ "t_1_25": 42, "t_26_50": 19, … }'],
-    ['GET','/ext/getlasttxs/{min}','Recent transactions ≥ min','[ { "txid": "…", "amount": … } ]'],
+    ['GET','/ext/getlastblocks/{count}','Recent blocks','[ { "height": 1493229, "forger": "cNS2…" } ]'],
+    ['GET','/ext/getmovement/{coin}/{page}','Large transfers, paged','{ "total": 13456, "data": [ … ] }'],
     ['GET','/ext/getcard/{ticker}','Deck card + provenance','{ "ticker": "DAS", "holder": "bKqf…uE1a" }']];
   const rows=eps.map(e=>`<div class="api-ep"><div><span class="m">${e[0]}</span><span class="p">${e[1]}</span></div><div class="d">${e[2]}</div><div class="code"><span class="k"># response</span>\n${esc(e[3])}</div></div>`).join('');
   document.getElementById('pg-api').innerHTML=`
@@ -1149,8 +1084,7 @@ function route(){
     case '':case 'home':show('home');setActiveNav('Explorer');break;
     case 'blocks':renderBlockList(param);show('blocks');setActiveNav('Blocks');break;
     case 'block':renderBlockDetail(param);show('block');setActiveNav('Blocks');break;
-    case 'txs':renderTxList(param);show('txs');setActiveNav('Transactions');break;
-    case 'tx':renderTxDetail(param);show('tx');setActiveNav('Transactions');break;
+    case 'tx':renderTxDetail(param);show('tx');setActiveNav('Explorer');break;
     case 'address':renderAddress(param);show('address');setActiveNav('Explorer');break;
     case 'card':renderCardPage(param);show('card');setActiveNav('Explorer');break;
     case 'movement':renderMovement(param);show('movement');setActiveNav('Movement');break;
@@ -1184,29 +1118,40 @@ function txHasCoin(tx,coin){if(tx.totals&&tx.totals.length)return tx.totals.some
 let _homeReq=0,_homeCoin='BRK',_lastTxs=[],_lastBlocks=[],_chainTip=null;
 async function chainTip(){if(_chainTip!=null)return _chainTip;const s=await fetchJSON('/ext/summary');_chainTip=(s&&s.data&&s.data[0]&&s.data[0].blockcount)||null;return _chainTip;}
 const HOMECOUNT={blocks:10,txs:10};       // rows shown per panel (10/25/50/100 switcher)
-function renderTxRows(){
-  const coin=_homeCoin,el=document.getElementById('txbody');if(!el)return;
-  const _tt=document.getElementById('txTtl');if(_tt)_tt.textContent='Latest '+coin+' transactions';
-  const txs=_lastTxs.filter(t=>txHasCoin(t,coin)).slice(0,HOMECOUNT.txs);
-  el.innerHTML=txs.length
-    ?txs.map(t=>`<tr><td data-label="Tx hash">${aTxLive(t.txid,coin)}</td><td data-label="Currency">${badge(coin)}</td><td class="amt" data-label="Amount">${grpAmt(coinToshis(t,coin)/1e8)}</td><td data-label="Age">${tsReal(t.timestamp)}</td></tr>`).join('')
-    :`<tr><td colspan="4"><div class="empty">No ${coin} transactions indexed yet</div></td></tr>`;
+function hashCell(h){
+  if(!h) return '<span class="dim">—</span>';
+  const shortened=h.slice(0,6)+'…'+h.slice(-4);
+  return `<span class="bhash" title="${esc(h)}"><span class="mono">${shortened}</span>${copyBtn(h)}</span>`;
+}
+// Reward: the block's mint, with its currency badge, to 4 decimals. On a PoW
+// block that is the mining reward, on PoS the stake's new coin.
+function rewardCell(b){
+  if(b.mint==null||!b.mintCurrency) return '<span class="dim">—</span>';
+  return amtCur(Number(b.mint), b.mintCurrency, 4);
 }
 function renderBlockRows(){
   const el=document.getElementById('blockbody');if(!el)return;
   const bl=_lastBlocks.slice(0,HOMECOUNT.blocks);
   el.innerHTML=bl.length
-    ?bl.map(b=>`<tr><td data-label="Block">${aBlock(b.height)}</td><td data-label="Age">${tsReal(b.timestamp)}</td><td data-label="Txns">${b.txns}</td><td data-label="Forged by">${b.forger?aAddrLive(b.forger):'<span class="dim">—</span>'}</td></tr>`).join('')
-    :`<tr><td colspan="4"><div class="empty">Indexing…</div></td></tr>`;
+    ?bl.map(b=>`<tr>`
+      +`<td data-label="Block">${aBlock(b.height)}</td>`
+      +`<td class="dim" data-label="Time">${tsReal(b.timestamp)}</td>`
+      +`<td data-label="Type"><span class="btype ${b.stake?'pos':'pow'}">${b.stake?'PoS':'PoW'}</span></td>`
+      +`<td data-label="Reward">${rewardCell(b)}</td>`
+      +`<td data-label="Hash">${hashCell(b.blockhash)}</td>`
+      +`<td data-label="Txns">${b.txns}</td>`
+      +`<td data-label="Forged by">${b.forger?aAddrLive(b.forger):'<span class="dim">—</span>'}</td>`
+      +`</tr>`).join('')
+    :`<tr><td colspan="7"><div class="empty">Loading…</div></td></tr>`;
 }
+
 async function applyLiveHome(coin){
   _homeCoin=coin;
   renderCoin(coin);                       // instant placeholder paint; live values overwrite below
   const my=++_homeReq;
-  const [sum,cs,ltx,lbl]=await Promise.all([
+  const [sum,cs,lbl]=await Promise.all([
     fetchJSON('/ext/summary'),
     fetchJSON('/ext/getcoinstats/'+coin),
-    fetchJSON('/ext/getlasttxs/0.00000001'),
     fetchJSON('/ext/getlastblocks/100')
   ]);
   if(my!==_homeReq)return;                 // superseded by a newer coin switch
@@ -1219,21 +1164,22 @@ async function applyLiveHome(coin){
   const supply=coin==='BRK'?grpInt(s.supply):'—';
   const posDiff=s.difficultyHybrid?grpDiff(String(s.difficultyHybrid).replace(/[^0-9.]/g,'')):'—';
   const powDiff=s.difficulty?grpDiff(String(s.difficulty).replace(/[^0-9.]/g,'')):'—';
-  const txc=(cs&&cs.txcount!=null)?grpInt(cs.txcount):'—';
+  // Chain-wide count of addresses holding value, from the daemon's rich list.
+  // It replaced a transaction count, which was the last figure on this page
+  // that needed a transaction index of our own.
+  const addrs=(s&&s.addresses)?grpInt(s.addresses):'—';
   const holders=(cs&&cs.holders)?grpInt(cs.holders):'—';   // per-currency AddressBalance; fills in after a reindex
   const coinSupply=(cs&&cs.supply)?grpInt(cs.supply):'—';  // per-currency supply for BRX/SIS
   let stat;
   if(coin==='BRX') stat=[['Total Supply (BRX)',coinSupply],['Holders',holders],['Inflation','None · fixed'],['Stakes','Breakout Coin']];
   else if(coin==='SIS') stat=[['Total Supply (SIS)',coinSupply],['Holders',holders],['Difficulty (PoW)',powDiff],['PoW Reward','50 SIS']];
-  else stat=[['Total Supply (BRK)',supply],['Holders',holders],['Difficulty (PoS)',posDiff],['Transactions',txc]];
+  else stat=[['Total Supply (BRK)',supply],['Holders',holders],['Difficulty (PoS)',posDiff],['Unique Addresses',addrs]];
   const logo=COINLOGO[coin]||'brk-coin.png';
   const cell=(x,extra='')=>`<div class="panel ${extra}"><div class="h"><span class="label">${x[0]}</span></div><div class="b" style="color:${C.color}">${x[1]}</div></div>`;
   const cst=document.getElementById('coinStats');cst.style.setProperty('--cc',C.color);
   cst.innerHTML=cell(stat[0])+cell(stat[1],'inner inner-l')+`<div class="coin-core"><img src="/images/${logo}" alt="${coin}"></div>`+cell(stat[2],'inner inner-r')+cell(stat[3]);
   // latest transactions + blocks — row counts driven by the per-panel switcher
-  _lastTxs=(ltx&&ltx.data)||[];
   _lastBlocks=(lbl&&lbl.data)||[];
-  renderTxRows();
   renderBlockRows();
   if(window.__decode)window.__decode(document.getElementById('coinView'));
 }
@@ -1255,7 +1201,7 @@ document.querySelectorAll('.rowcount').forEach(rc=>rc.addEventListener('click',e
   const b=e.target.closest('button');if(!b)return;
   rc.querySelectorAll('button').forEach(x=>x.classList.remove('on'));b.classList.add('on');
   const n=parseInt(b.dataset.n,10)||10;
-  if(rc.dataset.for==='blocks'){HOMECOUNT.blocks=n;renderBlockRows();}else{HOMECOUNT.txs=n;renderTxRows();}
+  if(rc.dataset.for==='blocks'){HOMECOUNT.blocks=n;renderBlockRows();}
 }));
 document.querySelector('.topsearch').addEventListener('submit',e=>{e.preventDefault();
   const q=(e.currentTarget.querySelector('input').value||'').trim();if(!q)return;
