@@ -122,6 +122,12 @@
   /* truncated hash plus its copy button, kept on one line */
   .bhash{display:inline-flex;align-items:center;white-space:nowrap}
   .bhash .copybtn{margin-left:6px;padding:1px 6px;font-size:10px}
+  /* rich list: full address plus copy, and right-aligned figures so the
+     magnitudes line up down the column */
+  .rladdr{display:inline-flex;align-items:center;white-space:nowrap}
+  .rladdr .copybtn{margin-left:6px;padding:1px 6px;font-size:10px}
+  .richtable th.amt,.richtable td.amt{text-align:right}
+  @media(max-width:760px){.richtable th.amt,.richtable td.amt{text-align:left}}
   .coin-activity > .sec{margin:0}
   @media(max-width:1000px){.coin-activity{grid-template-columns:1fr}}
   .panel .h{background:var(--bg-2);border-bottom:1px solid var(--border);padding:11px 16px}
@@ -535,31 +541,14 @@
 </footer>
 
 <script>
+// Placeholder strip, painted instantly so the layout does not jump; every
+// chain-derived figure here is a dash rather than a number, because applyLiveHome
+// replaces them a moment later and a stale figure shown in the meantime reads as
+// real. Only the protocol facts are stated outright -- those do not change.
 const COIN={
-  BRK:{color:'var(--brk)',stat:[['Total Supply (BRK)','24 065 245'],['Holders','3 188'],['Difficulty (PoS)','0.0000038'],['Transactions','2 418 903']]},
-  BRX:{color:'var(--brx)',stat:[['Total Supply (BRX)','12 500 000'],['Holders','1 042'],['Inflation','None · fixed'],['Stakes','Breakout Coin']]},
-  SIS:{color:'var(--sis)',stat:[['Total Supply (SIS)','6 268 082'],['Holders','2 351'],['Difficulty (PoW)','0.0000015'],['PoW Reward','50 SIS']]}
-};
-const TX={
-  BRK:[
-    ['1396822','d399825e4d140b0f5a90ce23…','2','10 244.99000000','12s ago'],
-    ['1396820','c6984596a0eb715ee0f1cdfc…','3','0.03000000','1m ago'],
-    ['1396815','44c0dafa6dd2c0973d4c3bdf…','2','2 293 352.99000000','4m ago'],
-    ['1396808','7b84489e88f4e4b8584180fa…','2','512.00000000','7m ago'],
-    ['1396790','1501b31b108719fa6c0dc7c2…','2','16 520 846.86713000','9m ago'],
-    ['1396771','a3c772fa7831508f4f157ba7…','1','75.50000000','13m ago']],
-  BRX:[
-    ['1396821','9af0b3c7e1d5a82f0c44b6d9…','1','12 500.00000000','30s ago'],
-    ['1396802','7e1dca0455b39f7016be2a8c…','2','3 400.00000000','6m ago'],
-    ['1396744','b26779c3dd66f18d2b734826…','1','9 875.00000000','15m ago'],
-    ['1396710','51240aa413b4f87c6cab7514…','2','1 200.00000000','22m ago']],
-  SIS:[
-    ['1396823','6ac6a040422775f986a8c109…','2','50.00000000','5s ago'],
-    ['1396819','b2c1ab42340018dcdbb953b1…','2','114.00000000','2m ago'],
-    ['1396812','d39e9139b1b062450066c55b…','2','50.00000000','5m ago'],
-    ['1396799','c8c8b93575ea936d4b322f64…','3','113.00000000','8m ago'],
-    ['1396781','40f4171f034f43d9be90a451…','2','50.00000000','11m ago'],
-    ['1396760','ee43a1278f924054c2289bb2…','2','112.00000000','16m ago']]
+  BRK:{color:'var(--brk)',stat:[['Total Supply (BRK)','—'],['Holders','—'],['Difficulty (PoS)','—'],['Unique Addresses','—']]},
+  BRX:{color:'var(--brx)',stat:[['Total Supply (BRX)','—'],['Holders','—'],['Inflation','None · fixed'],['Stakes','Breakout Coin']]},
+  SIS:{color:'var(--sis)',stat:[['Total Supply (SIS)','—'],['Holders','—'],['Difficulty (PoW)','—'],['PoW Reward','50 SIS']]}
 };
 // Deck card-transfer transactions (each carries the card as a little icon)
 const CARDTX=[
@@ -580,17 +569,20 @@ async function renderCardTx(){
     +`<td data-label="From">${t.from&&!/coinbase/i.test(t.from)?aAddrLive(t.from):'<span class="dim">mint</span>'}</td><td data-label="To">${t.to?aAddrLive(t.to):'—'}</td><td data-label="Block">${aBlock(t.block)}</td><td data-label="Time">${t.timestamp?tsReal(t.timestamp):'—'}</td></tr>`).join('')
     :`<tr><td colspan="5"><div class="empty">No card transfers indexed yet.</div></td></tr>`;
 }
+// Paints the stat strip with its static placeholder values so the layout is
+// there immediately; applyLiveHome overwrites every figure with live ones a
+// moment later. It must not touch anything else -- it used to also fill the
+// Latest transactions and Latest blocks tables from hardcoded samples, and
+// when those tables went the stale getElementById threw here, before the
+// awaits in applyLiveHome, so the live blocks never arrived either.
 function renderCoin(c){
-  const _tt=document.getElementById('txTtl');if(_tt)_tt.textContent='Latest '+c+' transactions';const C=COIN[c];
+  const C=COIN[c];
   const logo={BRK:'brk-coin.png',BRX:'brx-coin.png',SIS:'sis-coin.png'}[c];
   const cell=(s,extra='')=>`<div class="panel ${extra}"><div class="h"><span class="label">${s[0]}</span></div><div class="b" style="color:${C.color}">${s[1]}</div></div>`;
-  const cs=document.getElementById('coinStats');cs.style.setProperty('--cc',C.color);
+  const cs=document.getElementById('coinStats');if(!cs)return;
+  cs.style.setProperty('--cc',C.color);
   cs.innerHTML=cell(C.stat[0])+cell(C.stat[1],'inner inner-l')+`<div class="coin-core"><img src="/images/${logo}" alt="${c}"></div>`+cell(C.stat[2],'inner inner-r')+cell(C.stat[3]);
-  document.getElementById('txbody').innerHTML=TX[c].map(t=>`<tr><td data-label="Tx hash">${aTx(t[1],c)}</td><td data-label="Currency">${badge(c)}</td><td class="amt" data-label="Amount">${t[3]}</td><td data-label="Age">${t[4]}</td></tr>`).join('');
-  renderBlocks();
 }
-const BLOCKS=[['1396822','8s','2','bKqf…stake'],['1396821','1m','1','bZ9c…stake'],['1396820','2m','3','bRn8…miner'],['1396819','4m','2','b7Hk…stake'],['1396818','5m','5','bX2p…miner'],['1396817','7m','1','bM4d…stake']];
-function renderBlocks(){document.getElementById('blockbody').innerHTML=BLOCKS.map(b=>`<tr><td data-label="Block">${aBlock(b[0])}</td><td data-label="Age">${b[1]}</td><td data-label="Txns">${b[2]}</td><td data-label="Forged by">${aAddrShort(b[3])}</td></tr>`).join('');}
 
 const SUITS=[['S','♠','Spades','blk'],['D','♦','Diamonds','red'],['C','♣','Clubs','blk'],['H','♥','Hearts','red']];
 const RANKS=[['A','Ace'],['2','Two'],['3','Three'],['4','Four'],['5','Five'],['6','Six'],['7','Seven'],['8','Eight'],['9','Nine'],['T','Ten'],['J','Jack'],['Q','Queen'],['K','King']];
@@ -687,9 +679,7 @@ document.querySelector('.tt-dark').onclick=()=>document.documentElement.removeAt
 document.querySelector('.tt-light').onclick=()=>document.documentElement.setAttribute('data-theme','light');
 /* ===================== EXPLORER PAGES (Batch A) ===================== */
 function esc(s){return String(s).replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));}
-const aAddrShort=d=>`<a class="hash" href="#/address/${encodeURIComponent(d)}">${esc(d)}</a>`;
 const aBlock=n=>`<a class="hash" href="#/block/${n}">#${n}</a>`;
-const aTx=(h,c)=>`<a class="hash" href="#/tx/${c?encodeURIComponent(c)+'/':''}${encodeURIComponent(h)}">${esc(h)}</a>`;
 const aAddr=f=>`<a class="hash" href="#/address/${encodeURIComponent(f)}">${esc(f)}</a>`;
 const aCardTx=(h,tk)=>`<a class="hash" href="#/tx/DECK/${encodeURIComponent(tk)}/${encodeURIComponent(h)}">${esc(h.length>30?h.slice(0,24)+'…':h)}</a>`;
 const snap=()=>'';
@@ -799,9 +789,13 @@ async function renderBlockDetail(p){const n=parseInt(p,10);if(isNaN(n)||n<0){loc
     </div>`;
   if(window.__decode)window.__decode(el);
 }
-function ccyFilterBar(active,base,withCards){
+// noAll: for views that are inherently per-currency. The rich list is one --
+// the daemon's getrichlistpg is keyed by colour and there is no cross-currency
+// ranking to show, since a BRK balance and a SIS balance are not comparable.
+function ccyFilterBar(active,base,withCards,noAll){
   base=base||'#/movement/';
-  const opts=[['all','All'],['BRK','BRK'],['BRX','BRX'],['SIS','SIS']];
+  const opts=noAll?[]:[['all','All']];
+  opts.push(['BRK','BRK'],['BRX','BRX'],['SIS','SIS']);
   if(withCards)opts.push(['cards','Cards']);
   const colOf={BRK:CCCOLOR.BRK,BRX:CCCOLOR.BRX,SIS:CCCOLOR.SIS,cards:'var(--amber)'};
   return `<div class="ccyfilter"><span class="label">Filter</span>`+opts.map(o=>{
@@ -946,12 +940,22 @@ async function renderCardPage(p){const tk=(p||'').toUpperCase();const c=DECK.fin
   if(window.__decode)window.__decode(el);
 }
 /* ===================== BATCH B PAGES ===================== */
-async function renderRichList(p){const ccy=COIN3.includes((p||'').toUpperCase())?(p||'').toUpperCase():'BRK';const col=CCCOLOR[ccy];
+const RICH_PER=50;
+// #/richlist/<CCY>/<page> -- the coin is optional and the page is optional, so
+// both "#/richlist/BRX" and "#/richlist/3" have to parse.
+async function renderRichList(p){
+  const parts=(p||'').split('/').filter(Boolean);let ccy='BRK',pg=1;
+  if(parts.length){const f=parts[0].toUpperCase();
+    if(COIN3.includes(f)){ccy=f;if(parts[1])pg=parseInt(parts[1],10)||1;}
+    else pg=parseInt(parts[0],10)||1;}
+  pg=Math.max(1,pg);
+  const col=CCCOLOR[ccy];
   const el=document.getElementById('pg-richlist');
   const head=`<div class="pagehead">${crumb([['Explorer','#/'],['Rich list',null]])}</div><h1 class="ptitle"><span class="ttx">Rich list</span> ${badge(ccy)}</h1>`;
   el.innerHTML=head+`<div class="sec"><div class="h">${ccyFilterBar(ccy,'#/richlist/',false)}</div><div class="empty">Loading distribution…</div></div>`;
   // per-coin distribution + balance buckets from the AddressBalance side-collection (all coins; fills in after a reindex)
-  const [dist,bal]=await Promise.all([fetchJSON('/ext/getcoindist/'+ccy),fetchJSON('/ext/getcoinbuckets/'+ccy)]);
+  const [dist,bal,rich]=await Promise.all([fetchJSON('/ext/getcoindist/'+ccy),fetchJSON('/ext/getcoinbuckets/'+ccy),
+                                           fetchJSON('/ext/getrichlistpg/'+ccy+'/'+pg+'?per='+RICH_PER)]);
   const tierDefs=[['Top 1–25','t_1_25'],['Top 26–50','t_26_50'],['Top 51–75','t_51_75'],['Top 76–100','t_76_100'],['Holders 101+','t_101plus']];
   const tierRows=tierDefs.map(t=>{const d=(dist&&dist[t[1]])||{percent:'0.00'};const pct=parseFloat(d.percent)||0;
     return `<div class="distrow" style="--cc:${col}"><div class="dl">${t[0]}</div><div class="dbar"><span style="width:${Math.min(100,pct)}%"></span></div><div class="dp">${pct.toFixed(2)}%</div></div>`;}).join('');
@@ -959,10 +963,30 @@ async function renderRichList(p){const ccy=COIN3.includes((p||'').toUpperCase())
   const bmax=Math.max(1,...buckets.map(b=>b.count));
   const bRows=buckets.length?buckets.map(b=>`<div class="distrow" style="--cc:${col}"><div class="dl">${b.label} ${ccy}</div><div class="dbar"><span style="width:${Math.round(b.count/bmax*100)}%"></span></div><div class="dp">${Number(b.count).toLocaleString()}</div></div>`).join(''):`<div class="empty">No address balances indexed yet.</div>`;
   const topEmpty=tierDefs.slice(0,4).every(t=>(parseFloat((dist&&dist[t[1]]&&dist[t[1]].percent)||0)===0));
+  // The list itself. Ranks come from the server (page offset + position), not
+  // from the order of a JSON object's keys.
+  const rl=(rich&&rich.data)||[],rlPages=(rich&&rich.pages)||1,rlTotal=(rich&&rich.total)||0;
+  const rlSupply=Number(rich&&rich.supply)||0;
+  const dp=decFor(ccy);
+  const share=b=>rlSupply>0?((b/rlSupply)*100):null;
+  const rlRows=rl.length?rl.map(r=>{
+    const s=share(r.balance);
+    return `<tr>`
+      +`<td class="dim" data-label="Rank">${grpInt(r.rank)}</td>`
+      +`<td data-label="Address"><span class="rladdr">${aAddr(r.address)}${copyBtn(r.address)}</span></td>`
+      +`<td class="amt" data-label="Balance">${grpDec(r.balance,dp)}</td>`
+      +`<td class="amt dim" data-label="Share">${s==null?'—':(s<0.0001?'<0.0001':s.toFixed(4))}%</td>`
+      +`</tr>`;
+  }).join(''):`<tr><td colspan="4"><div class="empty">No ${ccy} balances on this page.</div></td></tr>`;
   el.innerHTML=head+`
-    <div class="sec"><div class="h">${ccyFilterBar(ccy,'#/richlist/',false)}<span class="label">${CCNAME[ccy]} · supply distribution</span></div>
+    <div class="sec"><div class="h">${ccyFilterBar(ccy,'#/richlist/',false,true)}<span class="label">${CCNAME[ccy]} · supply distribution</span></div>
       <div style="padding:5px 0">${tierRows}</div>
-      <div class="pagenote">Share of total supply held by each holder tier. Individual addresses are not listed — distribution only.${topEmpty?' <span class="dim">Per-currency balances populate after a reindex — tiers fill in once it completes.</span>':''}</div>
+      <div class="pagenote">Share of total supply held by each holder tier.${topEmpty?' <span class="dim">Per-currency balances populate after a reindex — tiers fill in once it completes.</span>':''}</div>
+    </div>
+    <div class="sec"><div class="h"><span class="ttl">Top ${ccy} addresses</span><span class="label">${grpInt(rlTotal)} holders · ranked by balance</span></div>
+      <table class="stack richtable"><thead><tr><th>Rank</th><th>Address</th><th class="amt">Balance (${ccy})</th><th class="amt">Share</th></tr></thead><tbody>${rlRows}</tbody></table>
+      ${pager(pg,rlPages,'#/richlist/'+ccy+'/')}
+      <div class="pagenote">Balances below one cent of a currency are not tracked by the node, so they do not appear here and are not counted in the holder total.</div>
     </div>
     <div class="sec"><div class="h"><span class="ttl">Balance distribution</span><span class="label">addresses by balance</span></div>
       <div style="padding:5px 0">${bRows}</div>
@@ -1045,6 +1069,7 @@ function renderApi(){
     ['GET','/ext/getbalance/{address}','Address balance only','12480.50000000'],
     ['GET','/ext/getsupply/{coin}','Coin total supply','24065245'],
     ['GET','/ext/getholders/{coin}','Holder count + top 100','{ "holders": 6815, "top": [ … ] }'],
+    ['GET','/ext/getrichlistpg/{coin}/{page}?per={n}','Rich list, paged','{ "total": 6815, "pages": 136, "data": [ { "rank": 1, … } ] }'],
     ['GET','/ext/getdistribution/{coin}','Wealth distribution tiers','{ "t_1_25": 42, "t_26_50": 19, … }'],
     ['GET','/ext/getlastblocks/{count}','Recent blocks','[ { "height": 1493229, "forger": "cNS2…" } ]'],
     ['GET','/ext/getmovement/{coin}/{page}','Large transfers, paged','{ "total": 13456, "data": [ … ] }'],
@@ -1228,7 +1253,7 @@ route();
       // reusable decode: page titles, section/table headers, and coin stat values
       window.__decode = (root) => {
         root = root || document;
-        const els = root.querySelectorAll('.ttx, .sec > .h .ttl:not(#txTtl), .stats .panel .b');
+        const els = root.querySelectorAll('.ttx, .sec > .h .ttl, .stats .panel .b');
         els.forEach((el, i) => animate(el, { innerHTML: scrambleText(), duration: 680, delay: Math.min(i * 45, 520) }));
       };
       animate('.brand',          { innerHTML: scrambleText(), duration: 1100, delay: 150 });

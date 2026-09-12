@@ -357,6 +357,94 @@ app.use('/ext/getholders/:coin', function(req,res){
   });
 });
 
+// Rich list, paged.
+//
+// getrichlistpg returns { total, page, per_page, last_page, data }, data being
+// an OBJECT keyed by address, valued in coins rather than satoshis.
+//
+// Its pages cannot be used as they arrive. The daemon holds the rich list as
+// balance -> set-of-addresses and GetRichList emits WHOLE buckets: it starts
+// at the bucket containing the requested rank and stops after the bucket
+// containing the last, deliberately returning everyone tied for last place.
+// A page therefore overruns at both ends, and where a bucket straddles a
+// boundary consecutive pages repeat addresses:
+//
+//     BRX, perpage 50 -> page 1: 50 rows
+//                        page 2: 134 rows, last balance 6034
+//                        page 3: 100 rows, first balance 6034   <- overlap
+//
+// Left alone, that shows the same address twice under two different ranks.
+//
+// The true rank of the first row is recoverable exactly. Every address at the
+// first returned balance b0 is present (buckets come whole), so if k of them
+// came back and getrichlistsize says n addresses hold at least b0, then n - k
+// of them are strictly richer and the first row ranks n - k + 1. Ranks follow
+// from there and the window the caller actually asked for is sliced out. The
+// daemon always emits through page*per, so the window is always covered.
+//
+// Against a daemon that pages exactly this is a no-op: k would equal the
+// bucket, the first rank would land on the window start, and nothing is
+// trimmed. Within a tie the order is the daemon's std::set ordering, which is
+// lexicographic by address and stable across calls.
+//
+// Supply rides along so the client can show each holder's share without a
+// second round trip, and from the same node, so the two cannot disagree.
+app.use('/ext/getrichlistpg/:coin/:page', function(req,res){
+  var coin  = (req.params.coin || '').toUpperCase();
+  var color = currs.color(coin);
+  var page  = Math.max(parseInt(req.params.page, 10) || 1, 1);
+  var per   = Math.min(Math.max(parseInt(req.query.per, 10) || 50, 1), 200);
+  var empty = { coin: coin, page: page, per: per, pages: 0, total: 0,
+                supply: 0, data: [] };
+  if (color === undefined) return res.send(empty);
+
+  rpc.call('getrichlistpg', {color: color, page: page, perpage: per, ordering: true},
+  function(rl){
+    if (!rl || typeof rl !== 'object' || !rl.data) return res.send(empty);
+
+    var rows = [];
+    for (var addr in rl.data) {
+      if (Object.prototype.hasOwnProperty.call(rl.data, addr)) {
+        rows.push({ address: addr, balance: Number(rl.data[addr]) });
+      }
+    }
+    if (!rows.length) {
+      empty.total = (typeof rl.total === 'number' ? rl.total : 0);
+      empty.pages = (typeof rl.last_page === 'number' ? rl.last_page : 0);
+      return res.send(empty);
+    }
+    // Sort is a safety net over the daemon's own descending order; it is stable
+    // in V8, so addresses tied on a balance keep the order they arrived in.
+    rows.sort(function(a, b){ return b.balance - a.balance; });
+
+    // compare on satoshis, so bucket membership is an integer test
+    var sat = function(b){ return Math.round(b * 1e8); };
+    var b0 = rows[0].balance, s0 = sat(b0), k = 0;
+    for (var i = 0; i < rows.length && sat(rows[i].balance) === s0; i++) k++;
+
+    rpc.call('getrichlistsize', {color: color, minbalance: b0}, function(n){
+      var firstRank = (typeof n === 'number') ? Math.max(1, n - k + 1)
+                                              : (page - 1) * per + 1;
+      var from = (page - 1) * per + 1, to = page * per, out = [];
+      for (var i = 0; i < rows.length; i++) {
+        var rank = firstRank + i;
+        if (rank < from) continue;
+        if (rank > to) break;
+        out.push({ rank: rank, address: rows[i].address, balance: rows[i].balance });
+      }
+      lib.get_moneysupply(coin, function(supply){
+        res.send({ coin:   coin,
+                   page:   page,
+                   per:    per,
+                   pages:  (typeof rl.last_page === 'number' ? rl.last_page : 1),
+                   total:  (typeof rl.total === 'number' ? rl.total : out.length),
+                   supply: supply || 0,
+                   data:   out });
+      });
+    });
+  });
+});
+
 // per-coin money supply (minted - burned), in coins
 app.use('/ext/getsupply/:coin', function(req,res){
   var coin = (req.params.coin || '').toUpperCase();
