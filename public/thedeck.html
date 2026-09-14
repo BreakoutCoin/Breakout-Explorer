@@ -127,6 +127,14 @@
   .bhash{display:inline-flex;align-items:center;white-space:nowrap;max-width:100%;min-width:0;vertical-align:middle}
   .bhash>a{min-width:0;overflow:hidden;text-overflow:ellipsis}
   .bhash .copybtn{flex:0 0 auto;margin-left:6px}
+  /* aAddrMid: the head shrinks to an ellipsis, the checksum tail never does;
+     .short caps the head at ten characters and its ellipsis */
+  .midell{display:inline-flex;max-width:100%;min-width:0;white-space:nowrap;vertical-align:bottom}
+  .midell>.mh{min-width:0;overflow:hidden;text-overflow:ellipsis}
+  .midell>.mt{flex:0 0 auto}
+  /* 11ch exactly can round to just short of ten characters and the ellipsis,
+     which drops a character and leaves a gap; the fraction keeps them */
+  .midell.short>.mh{max-width:11.3ch}
   /* block tables: the block ID takes the colour of its proof type, and the
      type column hugs the ID beside it */
   .bid.pos{color:var(--brx)} .bid.pow{color:var(--sis)}
@@ -367,6 +375,9 @@
   /* an address on one line with its copy button must not widen its column past
      the screen; min-width:0 lets it shrink to an ellipsis instead */
   .io-col,.io-row>span:first-child{min-width:0}
+  /* the amount keeps its width, so the address has a fixed space to fit, and
+     narrowing it to whole characters does not re-share the row */
+  .io-row>.amt{flex:0 0 auto;text-align:right}
   .io-row:first-of-type{border-top:0}
   @media(max-width:760px){.io-grid{grid-template-columns:1fr}.io-col+.io-col{border-left:0;border-top:1px solid var(--border-bright)}}
   /* address page panels: NFT/Currency first, then the four figures. Where five
@@ -748,7 +759,7 @@ async function showDetail(tk){
       <div class="meta">
         <div><span class="label">Ticker</span><div class="v">${c.tk}</div></div>
         <div><span class="label">Supply</span><div class="v">1 / 1</div></div>
-        <div><span class="label">Current holder</span><div class="v">${holder?withCopy(aAddr(holder),holder):'<span class="dim">—</span>'}</div></div>
+        <div><span class="label">Current holder</span><div class="v">${holder?withCopy(aAddrMid(holder),holder):'<span class="dim">—</span>'}</div></div>
         <div><span class="label">Transfers</span><div class="v">${Math.max(0,tr.length-1)}</div></div>
         <div><span class="label">Minted</span><div class="v">${mintBlock!=null?'block '+mintBlock:'<span class="dim">—</span>'}</div></div>
       </div>
@@ -797,6 +808,15 @@ document.querySelector('.tt-light').onclick=()=>document.documentElement.setAttr
 function esc(s){return String(s).replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));}
 const aBlock=n=>`<a class="hash" href="#/block/${n}">${n}</a>`;
 const aAddr=f=>`<a class="hash" href="#/address/${encodeURIComponent(f)}">${esc(f)}</a>`;
+// An address that may be shortened. Its last six characters, which carry the
+// checksum, are kept whole; only the part before them gives way to an ellipsis,
+// so a shortened address reads "brxLRau53k…XXYB7" in the conventional way. It
+// shows in full wherever there is room.
+const ADDR_TAIL=6;
+const addrParts=a=>`<span class="mh">${esc(a.slice(0,-ADDR_TAIL))}</span><span class="mt">${esc(a.slice(-ADDR_TAIL))}</span>`;
+const aAddrMid=(a,cls)=>a.length>ADDR_TAIL*2
+  ?`<a class="${cls||'hash'} midell" href="#/address/${encodeURIComponent(a)}" title="${esc(a)}">${addrParts(a)}</a>`
+  :aAddr(a);
 const aCardTx=(h,tk)=>`<a class="hash" href="#/tx/${encodeURIComponent(h)}" title="${esc(h)}">${esc(h.length>30?h.slice(0,24)+'…':h)}</a>`;
 // a link to an ID or address, followed by a button that copies the whole value
 const withCopy=(link,value)=>`<span class="bhash">${link}${copyBtn(value)}</span>`;
@@ -948,7 +968,7 @@ async function renderTxDetail(p){p=p||'';const parts=p.split('/');
   const fmtSum=m=>{const k=Object.keys(m);return k.length?k.map(c=>`${grpDec(m[c]/1e8,decFor(c))} ${badge(c)}`).join('<br>'):'<span class="dim">—</span>';};
   const feeVals=(tx.fees||[]).filter(f=>Number(f[1])>0);   // indexer fees go negative on mints (coins created) — not a real fee
   const feeStr=isCoinbase?'<span class="dim">— · newly minted</span>':(feeVals.length?feeVals.map(f=>`${grpDec(Number(f[1])/1e8,decFor(f[0]))} ${badge(f[0])}`).join('<br>'):'<span class="dim">0</span>');
-  const ioRow=x=>{const cb=/coinbase/i.test(x.address||'');const who=cb?'<span class="dim">⟲ coinbase · newly minted</span>':(x.address?withCopy(aAddr(x.address),x.address):'<span class="dim">—</span>');const cc=x.currency||'BRK';return `<div class="io-row"><span>${who}</span><span class="amt">${grpDec((Number(x.amount)||0)/1e8,decFor(cc))} ${badge(cc)}</span></div>`;};
+  const ioRow=x=>{const cb=/coinbase/i.test(x.address||'');const who=cb?'<span class="dim">⟲ coinbase · newly minted</span>':(x.address?withCopy(aAddrMid(x.address),x.address):'<span class="dim">—</span>');const cc=x.currency||'BRK';return `<div class="io-row"><span>${who}</span><span class="amt">${grpDec((Number(x.amount)||0)/1e8,decFor(cc))} ${badge(cc)}</span></div>`;};
   const ir=vin.length?vin.map(ioRow).join(''):`<div class="io-row"><span class="dim">⟲ no inputs</span><span></span></div>`;
   const or=vout.map(ioRow).join('');
   const tip=await chainTip();
@@ -1286,7 +1306,7 @@ async function renderCardPage(p){const tk=(p||'').toUpperCase();const c=DECK.fin
     if(t.mint)events+=`<div class="ev mint"><div class="line1">${t.to?aAddr(t.to):'—'} minted in the genesis deck <span class="tag mint">mint</span></div><div class="line2">${when} · reward tx ${aCardTx(t.txid,c.tk)}</div></div>`;
     else events+=`<div class="ev"><div class="line1">transferred to ${t.to?aAddr(t.to):'—'}${now?'<span class="tag now">current</span>':''}</div><div class="line2">${when} · tx ${aCardTx(t.txid,c.tk)}</div></div>`;});
   if(!events)events=`<div class="empty">No movements indexed for ${c.tk} yet.</div>`;
-  const ownRows=tr.length?tr.map((t,i)=>`<tr><td class="dim" data-label="Timestamp">${t.timestamp?tsReal(t.timestamp):'—'}</td><td data-label="Owner">${t.to?withCopy(aAddr(t.to),t.to):'—'}</td><td data-label="Status">${i===tr.length-1?'<span class="dir in">current</span>':'<span class="dim">past</span>'}</td></tr>`).join(''):`<tr><td colspan="3"><div class="empty">—</div></td></tr>`;
+  const ownRows=tr.length?tr.map((t,i)=>`<tr><td class="dim" data-label="Timestamp">${t.timestamp?tsReal(t.timestamp):'—'}</td><td data-label="Owner">${t.to?withCopy(aAddrMid(t.to),t.to):'—'}</td><td data-label="Status">${i===tr.length-1?'<span class="dir in">current</span>':'<span class="dim">past</span>'}</td></tr>`).join(''):`<tr><td colspan="3"><div class="empty">—</div></td></tr>`;
   const histRows=tr.length?tr.map(t=>`<tr><td class="dim" data-label="Timestamp">${t.timestamp?tsReal(t.timestamp):'—'}</td><td data-label="Tx ID">${withCopy(aCardTx(t.txid,c.tk),t.txid)}</td><td data-label="Type">${t.mint?'<span class="badge b-DECK" style="padding:1px 5px">reward</span>':'<span class="dim">transfer</span>'}</td></tr>`).join(''):`<tr><td colspan="3"><div class="empty">—</div></td></tr>`;
   el.innerHTML=head+`
     <div class="sec"><div class="carddetail">
@@ -1296,7 +1316,7 @@ async function renderCardPage(p){const tk=(p||'').toUpperCase();const c=DECK.fin
           <div class="k">Ticker</div><div class="v">${c.tk}</div>
           <div class="k">Name</div><div class="v">${name}</div>
           <div class="k">Supply</div><div class="v">1 / 1</div>
-          <div class="k">Current holder</div><div class="v">${holder?withCopy(aAddr(holder),holder):'<span class="dim">—</span>'}</div>
+          <div class="k">Current holder</div><div class="v">${holder?withCopy(aAddrMid(holder),holder):'<span class="dim">—</span>'}</div>
           <div class="k">Transfers</div><div class="v">${Math.max(0,tr.length-1)}</div>
           <div class="k">Minted</div><div class="v">${mintBlock!=null?'block '+mintBlock:'—'}${tr[0]&&tr[0].timestamp?' <span class="dim">· '+tsReal(tr[0].timestamp)+'</span>':''}</div>
         </div>
@@ -1350,7 +1370,7 @@ async function renderRichList(p){
     const s=share(r.balance);
     return `<tr>`
       +`<td class="dim" data-label="Rank">${grpInt(r.rank)}</td>`
-      +`<td data-label="Address">${withCopy(aAddr(r.address),r.address)}</td>`
+      +`<td data-label="Address">${withCopy(aAddrMid(r.address),r.address)}</td>`
       +`<td class="amt" data-label="Balance">${grpDec(r.balance,dp)}</td>`
       +`<td class="amt dim" data-label="Share">${s==null?'—':(s<0.0001?'<0.0001':s.toFixed(4))}%</td>`
       +`</tr>`;
@@ -1515,7 +1535,8 @@ function grpDiff(n){n=Number(n);if(!isFinite(n))return '—';const dp=Math.abs(n
 function tsReal(sec){const d=new Date(Number(sec)*1000);if(isNaN(d.getTime()))return '—';const p=n=>String(n).padStart(2,'0');return `${d.getUTCDate()} ${MON[d.getUTCMonth()]} ${d.getUTCFullYear()} ${p(d.getUTCHours())}:${p(d.getUTCMinutes())}`;}
 const encU=encodeURIComponent;
 const aTxLive=(h,c)=>`<a class="hash" href="#/tx/${c?c+'/':''}${encU(h)}" title="${esc(h)}">${esc(h.length>22?h.slice(0,20)+'…':h)}</a>`;
-const aAddrLive=(a,cls)=>`<a class="${cls||'hash'}" href="#/address/${encU(a)}" title="${esc(a)}">${esc(a.length>18?a.slice(0,11)+'…'+a.slice(-4):a)}</a>`;
+// an address always shown short, for tables with many columns
+const aAddrLive=(a,cls)=>aAddrMid(a,(cls||'hash')+' short');
 const COINLOGO={BRK:'brk-coin.png',BRX:'brx-coin.png',SIS:'sis-coin.png'};
 function coinToshis(tx,coin){if(tx.totals&&tx.totals.length){const f=tx.totals.find(t=>t[0]===coin);if(f)return Number(f[1]);}return Number(tx.total)||0;}
 function txHasCoin(tx,coin){if(tx.totals&&tx.totals.length)return tx.totals.some(x=>x[0]===coin);return (tx.vout||[]).some(v=>v.currency===coin);}
@@ -1720,6 +1741,45 @@ document.querySelectorAll('.rowcount').forEach(rc=>rc.addEventListener('click',e
   const n=parseInt(b.dataset.n,10)||10;
   if(rc.dataset.for==='blocks'){HOMECOUNT.blocks=n;renderBlockRows();}
 }));
+// A head squeezed by its cell is cut at a whole character, which can leave up
+// to a character's width empty between its ellipsis and the tail. Each clipped
+// head is narrowed to whole characters (plus the same small margin .short
+// uses) so the ellipsis meets the tail. Rechecked whenever the page renders
+// new content or the window changes size.
+function snapAddrs(){
+  _snapQ=false;
+  document.querySelectorAll('.midell>.mh').forEach(h=>{
+    h.style.maxWidth='';
+    if(h.scrollWidth<=h.clientWidth)return;
+    const cw=h.scrollWidth/h.textContent.length;       // the font is monospace
+    h.style.maxWidth=(Math.floor(h.clientWidth/cw-0.3)+0.3)*cw+'px';
+  });
+}
+let _snapQ=false;
+const queueSnap=()=>{if(!_snapQ){_snapQ=true;requestAnimationFrame(snapAddrs);}};
+// only content that brings addresses with it; ages and decode animations
+// rewrite text constantly and need no recheck
+new MutationObserver(recs=>{
+  if(recs.some(r=>[...r.addedNodes].some(n=>n.nodeType===1&&(n.matches('.midell')||n.querySelector('.midell')))))queueSnap();
+}).observe(document.body,{childList:true,subtree:true});
+window.addEventListener('resize',queueSnap);
+if(document.fonts)document.fonts.ready.then(queueSnap);
+// a coin or card icon arriving late can narrow the cell an address shares
+document.addEventListener('load',e=>{if(e.target.tagName==='IMG')queueSnap();},true);
+// The search box's placeholder, in its short form whenever the full one would
+// not fit the box, as on a phone, where the field is also set larger.
+const SEARCH_HINT=['Search address · tx ID · height · card','Address · tx ID · height · card'];
+function fitSearchHint(){
+  const i=document.querySelector('.topsearch input');if(!i||!i.clientWidth)return;
+  const cs=getComputedStyle(i);
+  const ctx=fitSearchHint.ctx||(fitSearchHint.ctx=document.createElement('canvas').getContext('2d'));
+  ctx.font=`${cs.fontSize} ${cs.fontFamily}`;
+  const room=i.clientWidth-parseFloat(cs.paddingLeft)-parseFloat(cs.paddingRight);
+  i.placeholder=ctx.measureText(SEARCH_HINT[0]).width<=room?SEARCH_HINT[0]:SEARCH_HINT[1];
+}
+fitSearchHint();
+window.addEventListener('resize',fitSearchHint);
+if(document.fonts)document.fonts.ready.then(fitSearchHint);
 document.querySelector('.topsearch').addEventListener('submit',e=>{e.preventDefault();
   const q=(e.currentTarget.querySelector('input').value||'').trim();if(!q)return;
   const card=DECK.find(x=>x.tk===q.toUpperCase());
