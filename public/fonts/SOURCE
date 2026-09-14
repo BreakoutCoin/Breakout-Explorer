@@ -1,0 +1,11 @@
+These fonts are distributed under the SIL Open Font License, Version 1.1.
+Each font's licence, with its copyright notice, is in the OFL-*.txt file
+beside it, copied from ofl/<family>/OFL.txt of https://github.com/google/fonts.
+
+  jetbrains-mono-var.woff2   JetBrains Mono 2.211   OFL-JetBrainsMono.txt
+  silkscreen-regular.woff2   Silkscreen 1.001       OFL-Silkscreen.txt
+  silkscreen-bold.woff2      Silkscreen 1.001       OFL-Silkscreen.txt
+  vt323-regular.woff2        VT323 2.000            OFL-VT323.txt
+
+The files are WOFF2 conversions of the released fonts, unmodified otherwise;
+the copyright notice in each font's name table matches its licence file.

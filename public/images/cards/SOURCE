@@ -1,0 +1,17 @@
+The card faces are PNG renderings of Byron Knoll's Vector Playing Cards,
+which he released into the public domain in March 2011:
+
+  "I am releasing the images into the public domain. This means that they
+  can be used for any purpose without any attribution (although attribution
+  would be appreciated)."
+    -- https://web.archive.org/web/20110413150009/http://byronknoll.blogspot.com/2011/03/vector-playing-cards.html
+
+  "These images are released into the public domain - attribution is
+  appreciated but not required."
+    -- https://web.archive.org/web/20110410064033/http://code.google.com/p/vector-playing-cards/
+
+With thanks to Byron Knoll. Knoll notes that his ace of spades is based on
+artwork by Suzanne Tyson.
+
+Each file is named for the card's Breakout ticker: D, then the rank
+(A 2-9 T J Q K), then the suit (S H D C). DJK is the joker.
