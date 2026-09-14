@@ -145,8 +145,11 @@ app.use('/ext/getaddress/:hash', function(req,res){
   var hash = req.param('hash');
   explore_address(hash, settings.txcount || 100, function(r){
     if (!r) return res.send({ error: 'address not found.', hash: hash});
+    // An address holds exactly one currency, fixed by its prefix; the daemon
+    // reports it as a colour.
     res.send({
       address: hash,
+      currency: currs.ticker(r.info.color) || null,
       sent: r.info.sent,
       received: r.info.received,
       balance: String(r.info.balance).replace(/(^-+)/mg, ''),

@@ -351,6 +351,18 @@
   @media(max-width:760px){.io-grid{grid-template-columns:1fr}.io-col+.io-col{border-left:0;border-top:1px solid var(--border-bright)}}
   .balrow{display:grid;grid-template-columns:repeat(4,1fr);gap:20px;margin:18px 0}
   @media(max-width:820px){.balrow{grid-template-columns:1fr 1fr}}
+  /* each figure stays on one line; fitFigures sets it smaller when it would not
+     fit. min-width:0 keeps an unbreakable figure from widening its grid track
+     instead of overflowing, which is what fitFigures measures. */
+  .balrow>.panel{min-width:0}
+  .balrow .b{font-size:26px;white-space:nowrap;overflow:hidden}
+  .balrow .b .tk{font-size:.6em;color:var(--text-muted);margin-left:.35em}
+  /* address page: the address's currency, flush right on the breadcrumb line */
+  .pageccy{margin-left:auto}
+  .pageccy .cbadge{gap:8px}
+  .pageccy .cchip{width:26px;height:26px}
+  .pageccy .ccard{width:19px;height:27px}
+  .pageccy .ctk{font-size:16px;letter-spacing:.8px}
   .held{display:flex;gap:12px;flex-wrap:wrap;padding:18px}
   .held .card{width:79px}
   .empty{padding:26px 18px;text-align:center;color:var(--text-dim);font-size:13px;letter-spacing:.8px;text-transform:uppercase}
@@ -931,13 +943,14 @@ async function renderTxDetail(p){p=p||'';const parts=p.split('/');
   if(window.__decode)window.__decode(el);
 }
 async function renderAddress(p){const a=decodeURIComponent(p||'');
-  const head=`<div class="pagehead">${crumb([['Explorer','#/'],['Address',null]])}</div>${addrBar(a)}`;
+  // the currency is known only once the address info arrives
+  const head=ccy=>`<div class="pagehead">${crumb([['Explorer','#/'],['Address',null]])}${ccy?`<span class="pageccy">${badge(ccy)}</span>`:''}</div>${addrBar(a)}`;
   const el=document.getElementById('pg-address');
-  el.innerHTML=head+`<div class="sec"><div class="empty">Loading address…</div></div>`;
+  el.innerHTML=head()+`<div class="sec"><div class="empty">Loading address…</div></div>`;
   paintStealthicon(a);
   const info=await fetchJSON('/ext/getaddress/'+encU(a));
   if(!info||info.error||info.address==null){
-    el.innerHTML=head+`<div class="sec"><div class="empty">No activity indexed for this address yet.</div></div>`;
+    el.innerHTML=head()+`<div class="sec"><div class="empty">No activity indexed for this address yet.</div></div>`;
     paintStealthicon(a);
     if(window.__decode)window.__decode(el);return;
   }
@@ -957,20 +970,34 @@ async function renderAddress(p){const a=decodeURIComponent(p||'');
   }).join('')||`<tr><td colspan="5"><div class="empty">No transactions indexed.</div></td></tr>`;
   const held=Object.keys(heldSet);
   const heldHtml=held.length?`<div class="held">${held.map(tk=>`<a href="#/card/${tk}" class="card"><img src="/images/cards/${tk}.png" alt="${tk}"><div class="own">${tk}</div></a>`).join('')}</div>`:'<div class="empty">No Deck cards seen in this address’s recent transactions. Each card’s current holder is shown on its card page.</div>';
-  el.innerHTML=head+`
+  const ccy=info.currency||'';
+  const tk=ccy?`<span class="tk">${esc(ccy)}</span>`:'';
+  el.innerHTML=head(ccy)+`
     <div class="balrow">
-      <div class="panel"><div class="h"><span class="label">Balance</span></div><div class="b" style="font-size:26px;color:var(--blue)">${grpDiff(info.balance)}</div></div>
-      <div class="panel"><div class="h"><span class="label">Total received</span></div><div class="b" style="font-size:26px">${grpDiff(info.received)}</div></div>
-      <div class="panel"><div class="h"><span class="label">Total sent</span></div><div class="b" style="font-size:26px">${grpDiff(info.sent)}</div></div>
-      <div class="panel"><div class="h"><span class="label">Tx count</span></div><div class="b" style="font-size:26px">${grpInt(list.length)}</div></div>
+      <div class="panel"><div class="h"><span class="label">Balance</span></div><div class="b" style="color:var(--blue)">${grpDiff(info.balance)}${tk}</div></div>
+      <div class="panel"><div class="h"><span class="label">Total received</span></div><div class="b">${grpDiff(info.received)}${tk}</div></div>
+      <div class="panel"><div class="h"><span class="label">Total sent</span></div><div class="b">${grpDiff(info.sent)}</div></div>
+      <div class="panel"><div class="h"><span class="label">Tx count</span></div><div class="b">${grpInt(list.length)}</div></div>
     </div>
     <div class="sec"><div class="h"><span class="ttl">Deck cards seen</span><span class="label">${held.length} in recent tx</span></div>${heldHtml}</div>
     <div class="sec"><div class="h"><span class="ttl">Transaction history</span><span class="label">latest ${Math.min(list.length,CAP)} of ${list.length}</span></div>
       <table class="stack"><thead><tr><th>Tx hash</th><th>Block</th><th>Direction</th><th>Amount</th><th>Time</th></tr></thead><tbody>${txrows}</tbody></table>
     </div>`;
   paintStealthicon(a);
+  fitFigures(el);
+  if(document.fonts)document.fonts.ready.then(()=>fitFigures(el));
   if(window.__decode)window.__decode(el);
 }
+// Sets each balance-row figure smaller, a pixel at a time from its stylesheet
+// size, until the amount and its ticker fit on one line.
+function fitFigures(root){
+  root.querySelectorAll('.balrow .b').forEach(b=>{
+    b.style.fontSize='';
+    let s=parseFloat(getComputedStyle(b).fontSize);
+    while(b.scrollWidth>b.clientWidth&&s>10){s--;b.style.fontSize=s+'px';}
+  });
+}
+window.addEventListener('resize',()=>{const el=document.getElementById('pg-address');if(el&&!el.hidden)fitFigures(el);});
 /* ---- address bar: Stealthicon, address, and the QR code and Stealthicon dialogs ---- */
 const STEALTHICONS_URL='https://stealthicons.stealth.org/';
 const QRICON='<svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M1 1h6v6H1zm1.5 1.5v3h3v-3zM9 1h6v6H9zm1.5 1.5v3h3v-3zM1 9h6v6H1zm1.5 1.5v3h3v-3z"/><path d="M3 3h2v2H3zM11 3h2v2h-2zM3 11h2v2H3zM9 9h2v2H9zM13 9h2v2h-2zM11 11h2v2h-2zM9 13h2v2H9zM13 13h2v2h-2z"/></svg>';
