@@ -283,20 +283,46 @@
   .copybtn{cursor:pointer;color:var(--text-muted);border:1px solid var(--border);border-radius:3px;line-height:0;padding:3px;margin-left:8px;background:var(--bg-2);vertical-align:middle}
   .copybtn:hover{color:var(--phosphor);border-color:var(--border-bright)}
   .copybtn.done{color:var(--phosphor)}
-  /* address page: QR code and Stealthicon side by side, each with its buttons */
-  .addr-imgs{display:flex;gap:22px;align-items:flex-start;flex-wrap:wrap}
-  .aimg{display:flex;flex-direction:column;align-items:center;gap:8px}
-  .aimg .qr{display:block;min-width:124px;min-height:124px;image-rendering:pixelated;border-radius:4px;background:#fff}
-  .aimg-btns{display:grid;grid-template-columns:1fr 1fr;gap:4px;width:100%}
-  .imgbtn{font-family:var(--body);font-size:10px;text-transform:uppercase;letter-spacing:.4px;white-space:nowrap;color:var(--text-muted);background:var(--bg-2);border:1px solid var(--border);border-radius:3px;padding:3px 7px;cursor:pointer}
+  /* address page: the Stealthicon beside a pane holding the address and the
+     buttons that open its QR code and Stealthicon; the icon matches the
+     pane's height, which is two lines' worth on either layout */
+  .addrbar{--abh:48px;display:flex;align-items:center;gap:10px;margin:16px 0 2px}
+  .ab-icon{flex:0 0 auto;width:var(--abh);height:var(--abh);padding:0;border:0;background:none;cursor:pointer;border-radius:9px}
+  .ab-icon svg{display:block;width:100%;height:100%}
+  .ab-icon.wait{background:var(--bg-2)}
+  .ab-pane{min-width:0;min-height:var(--abh);display:flex;flex-wrap:wrap;align-items:center;align-content:center;gap:6px 14px;padding:4px 12px;background:var(--bg-1);border:1px solid var(--border);border-radius:4px}
+  .ab-line{display:inline-flex;align-items:center;min-width:0}
+  .ab-addr{font-family:var(--body);font-size:13px;color:var(--text);word-break:break-all}
+  .ab-btns{display:inline-flex;gap:6px}
+  .abbtn{display:inline-flex;align-items:center;gap:6px;font-family:var(--body);font-size:11px;text-transform:uppercase;letter-spacing:.5px;white-space:nowrap;color:var(--text-muted);background:var(--bg-2);border:1px solid var(--border);border-radius:3px;padding:3px 8px;cursor:pointer}
+  .abbtn:hover{color:var(--phosphor);border-color:var(--border-bright)}
+  .abbtn svg,.abbtn img{display:block;width:14px;height:14px;border-radius:3px}
+  @media(max-width:640px){
+    .addrbar{--abh:62px;gap:8px}
+    .ab-pane{flex:1;padding:4px 8px}
+    .ab-line{flex-basis:100%}            /* the buttons always start their own line */
+    .ab-addr{font-size:clamp(10px,2.9vw,13px)}
+    .ab-line .copybtn{margin-left:6px}
+  }
+  /* QR code and Stealthicon dialogs */
+  .adlg{padding:0;border:1px solid var(--border-bright);border-radius:6px;background:var(--bg-1);color:var(--text);width:min(360px,calc(100vw - 32px));max-width:none}
+  .adlg::backdrop{background:rgba(0,0,0,.62)}
+  .dlg-h{display:flex;justify-content:space-between;align-items:center;padding:10px 12px 10px 18px;background:var(--bg-2);border-bottom:1px solid var(--border)}
+  .dlg-h .ttl{font-family:var(--display);font-size:24px;line-height:1}
+  .dlg-x{background:none;border:0;color:var(--text-muted);font-size:24px;line-height:1;padding:0 6px;cursor:pointer}
+  .dlg-x:hover{color:var(--phosphor)}
+  .dlg-b{padding:20px 18px;display:flex;flex-direction:column;align-items:center;gap:16px}
+  .dlg-qr{display:block;width:248px;height:248px;image-rendering:pixelated;background:#fff;border-radius:4px}
+  .dlg-addr{font-size:12px;color:var(--text-muted);word-break:break-all;text-align:center}
+  .dlg-card{min-height:146px;display:flex;align-items:center;justify-content:center}
+  .dlg-card canvas{display:block;max-width:100%;height:auto!important}
+  .dlg-memo{display:flex;flex-direction:column;gap:6px;width:100%}
+  .dlg-memo input{background:var(--bg);border:1px solid var(--border-bright);border-radius:3px;color:var(--text);font-family:var(--body);font-size:13px;padding:8px 10px}
+  .dlg-memo input::placeholder{color:var(--text-dim)}
+  .dlg-btns{display:grid;grid-template-columns:1fr 1fr;gap:6px;width:100%}
+  .imgbtn{font-family:var(--body);font-size:11px;text-transform:uppercase;letter-spacing:.4px;white-space:nowrap;color:var(--text-muted);background:var(--bg-2);border:1px solid var(--border);border-radius:3px;padding:6px 8px;cursor:pointer}
   .imgbtn:hover{color:var(--phosphor);border-color:var(--border-bright)}
   .imgbtn.done{color:var(--phosphor);border-color:color-mix(in srgb,var(--phosphor) 45%,var(--border-bright))}
-  /* the Stealthicon card as shown: the mark over its name, together no taller than the QR code */
-  .sicard{width:124px;height:124px;display:flex;flex-direction:column;align-items:center;justify-content:space-between}
-  .sicard .simark{width:94px;height:94px}
-  .sicard .simark svg{display:block;width:100%;height:100%}
-  .sicard .siname{font-family:var(--body);font-size:18px;font-weight:500;line-height:24px;height:24px;color:var(--text);letter-spacing:1px}
-  .sicard.wait .simark{background:var(--bg-2);border-radius:17px}
   .sicap{font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:var(--text-dim)}
   .sicap:hover{color:var(--phosphor)}
   .kv{display:grid;grid-template-columns:max-content 1fr}
@@ -311,8 +337,6 @@
   .entnav .dis{opacity:.35}
   .rawapi{font-size:12px;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);border:1px solid var(--border);border-radius:3px;padding:5px 11px;font-family:var(--body)}
   .rawapi:hover{color:var(--phosphor);border-color:var(--border-bright)}
-  .addr-head{display:flex;align-items:flex-start;gap:22px;flex-wrap:wrap}
-  .addr-head .ahl{flex:1;min-width:240px} .addr-head .ahq{flex:0 0 auto}
   .pager{display:flex;gap:6px;align-items:center;justify-content:center;flex-wrap:wrap;padding:18px}
   .pgbtn{font-family:var(--body);font-size:13px;color:var(--text-muted);background:var(--bg-2);border:1px solid var(--border);border-radius:3px;padding:6px 11px;cursor:pointer;min-width:34px;text-align:center}
   .pgbtn:hover{color:var(--phosphor);border-color:var(--border-bright)}
@@ -583,6 +607,9 @@
     </div>
   </div>
 </footer>
+
+<!-- the address page's QR code and Stealthicon dialogs; filled when opened -->
+<dialog class="adlg" id="adlg"></dialog>
 
 <script>
 // Placeholder strip, painted instantly so the layout does not jump; every
@@ -904,11 +931,7 @@ async function renderTxDetail(p){p=p||'';const parts=p.split('/');
   if(window.__decode)window.__decode(el);
 }
 async function renderAddress(p){const a=decodeURIComponent(p||'');
-  const head=`<div class="pagehead">${crumb([['Explorer','#/'],['Address',null]])}</div>
-    <div class="addr-head">
-      <div class="ahl"><h1 class="ptitle" style="font-size:22px;word-break:break-all;margin-top:6px"><span class="ttx">${esc(a)||'—'}</span>${copyBtn(a)}</h1></div>
-      <div class="ahq">${addrImages(a)}</div>
-    </div>`;
+  const head=`<div class="pagehead">${crumb([['Explorer','#/'],['Address',null]])}</div>${addrBar(a)}`;
   const el=document.getElementById('pg-address');
   el.innerHTML=head+`<div class="sec"><div class="empty">Loading address…</div></div>`;
   paintStealthicon(a);
@@ -948,17 +971,51 @@ async function renderAddress(p){const a=decodeURIComponent(p||'');
   paintStealthicon(a);
   if(window.__decode)window.__decode(el);
 }
-/* ---- address images: QR code and Stealthicon, each copyable and saveable as PNG ---- */
+/* ---- address bar: Stealthicon, address, and the QR code and Stealthicon dialogs ---- */
 const STEALTHICONS_URL='https://stealthicons.stealth.org/';
-function addrImages(a){
-  return `<div class="addr-imgs" data-a="${esc(a)}">`
-    +`<div class="aimg"><img class="qr" src="/qr/${encU(a)}" alt="QR code for ${esc(a)}">`
-    +`<div class="aimg-btns"><button class="imgbtn" type="button" data-act="qr-copy">Copy Image</button><button class="imgbtn" type="button" data-act="qr-save">Save Image</button></div></div>`
-    +`<div class="aimg"><div class="sicard wait" title="Stealthicon"><div class="simark"></div><div class="siname">&nbsp;</div></div>`
-    +`<div class="aimg-btns"><button class="imgbtn" type="button" data-act="si-copy">Copy Image</button><button class="imgbtn" type="button" data-act="si-save">Save Image</button>`
-    +`<button class="imgbtn" type="button" data-act="card-copy">Copy Card</button><button class="imgbtn" type="button" data-act="card-save">Save Card</button></div>`
-    +`<a class="sicap" href="${STEALTHICONS_URL}" target="_blank" rel="noopener">Stealthicons ↗</a></div>`
-    +`</div>`;
+const QRICON='<svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M1 1h6v6H1zm1.5 1.5v3h3v-3zM9 1h6v6H9zm1.5 1.5v3h3v-3zM1 9h6v6H1zm1.5 1.5v3h3v-3z"/><path d="M3 3h2v2H3zM11 3h2v2h-2zM3 11h2v2H3zM9 9h2v2H9zM13 9h2v2h-2zM11 11h2v2h-2zM9 13h2v2H9zM13 13h2v2h-2z"/></svg>';
+function addrBar(a){
+  return `<div class="addrbar" data-a="${esc(a)}">`
+    +`<button class="ab-icon wait" type="button" data-dlg="si" aria-label="Show Stealthicon"></button>`
+    +`<div class="ab-pane">`
+    +`<span class="ab-line"><span class="ab-addr ttx">${esc(a)||'—'}</span>${copyBtn(a)}</span>`
+    +`<span class="ab-btns"><button class="abbtn" type="button" data-dlg="qr">${QRICON}QR Code</button>`
+    +`<button class="abbtn" type="button" data-dlg="si"><img src="/vendor/stealthicons/logo.svg" alt="">Stealthicon</button></span>`
+    +`</div></div>`;
+}
+const _dlg=()=>document.getElementById('adlg');
+function openAddrDialog(kind,a){
+  const d=_dlg();d.dataset.a=a;
+  const head=t=>`<div class="dlg-h"><span class="ttl">${t}</span><button class="dlg-x" type="button" data-close aria-label="Close">×</button></div>`;
+  const btn=(act,label)=>`<button class="imgbtn" type="button" data-act="${act}">${label}</button>`;
+  if(kind==='qr'){
+    d.innerHTML=`<div class="dlg-in">${head('QR code')}<div class="dlg-b">`
+      +`<img class="dlg-qr" src="/qr/${encU(a)}" alt="QR code for ${esc(a)}">`
+      +`<div class="dlg-addr">${esc(a)}</div>`
+      +`<div class="dlg-btns">${btn('qr-copy','Copy Image')}${btn('qr-save','Save Image')}</div>`
+      +`</div></div>`;
+  }else{
+    d.innerHTML=`<div class="dlg-in">${head('Stealthicon')}<div class="dlg-b">`
+      +`<div class="dlg-card"><div class="empty">Computing…</div></div>`
+      +`<label class="dlg-memo"><span class="label">Memo <span class="dim">· optional, for the card only</span></span>`
+      +`<input type="text" id="siMemo" maxlength="80" spellcheck="false" placeholder="e.g. cold wallet"></label>`
+      +`<div class="dlg-btns">${btn('si-copy','Copy Image')}${btn('si-save','Save Image')}${btn('card-copy','Copy Card')}${btn('card-save','Save Card')}</div>`
+      +`<a class="sicap" href="${STEALTHICONS_URL}" target="_blank" rel="noopener">About Stealthicons ↗</a>`
+      +`</div></div>`;
+    previewCard(a);
+  }
+  if(!d.open)d.showModal();
+}
+// The dialog shows the card exactly as Copy Card and Save Card will produce
+// it, memo included, redrawn as the memo is typed.
+let _cardRun=0,_memoT=null;
+function previewCard(a){
+  const my=++_cardRun,d=_dlg(),memo=(d.querySelector('#siMemo')||{}).value||'';
+  stealthCardCanvas(a,memo).then(c=>{
+    const box=d.querySelector('.dlg-card');
+    if(my!==_cardRun||!box||d.dataset.a!==a)return;
+    box.replaceChildren(c);
+  }).catch(e=>{console.warn('[stealthicon]',e);const box=d.querySelector('.dlg-card');if(box)box.innerHTML='<div class="empty">Could not compute the Stealthicon.</div>';});
 }
 // The library is ~100 KB and only this page needs it, so it loads on first use.
 let _siLib=null;
@@ -977,15 +1034,13 @@ function stealthiconFor(a){
   return _siMemo[a];
 }
 // The address page re-renders its header as data arrives, so this fills in
-// whichever copy of the Stealthicon box is on the page when the icon is ready.
+// whichever copy of the address bar is on the page when the icon is ready.
 function paintStealthicon(a){
   stealthiconFor(a).then(si=>{
-    const box=document.querySelector('#pg-address .addr-imgs');
-    if(!box||box.dataset.a!==a)return;
-    const card=box.querySelector('.sicard');
-    card.querySelector('.simark').innerHTML=si.svg;
-    card.querySelector('.siname').textContent=si.name;
-    card.classList.remove('wait');
+    const bar=document.querySelector('#pg-address .addrbar');
+    if(!bar||bar.dataset.a!==a)return;
+    const icon=bar.querySelector('.ab-icon');
+    icon.innerHTML=si.svg;icon.title=si.name;icon.classList.remove('wait');
   }).catch(e=>console.warn('[stealthicon]',e));
 }
 function imgFrom(src){return new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=()=>rej(new Error('image load failed'));i.src=src;});}
@@ -1005,24 +1060,51 @@ async function stealthMarkPng(a){
   const c=document.createElement('canvas');c.width=c.height=px;c.getContext('2d').drawImage(img,0,0,px,px);
   return canvasPng(c);
 }
-// The card: the mark over its name, at three times the size shown on the
-// page. Its panel, border and ink are the colours of the cards made at
-// stealthicons.stealth.org, so a card reads the same wherever it came from.
+// The card: an optional memo over the mark over its name, drawn at three
+// times its layout size. Its panel, border and ink are the colours of the
+// cards made at stealthicons.stealth.org, so a card reads the same wherever
+// it came from. A memo widens the card up to a limit, then wraps.
 const SICARD={panel:'#F5F7FA',rule:'#C3CDD6',ink:'#101E2A'};
-async function stealthCardPng(a){
+const CARDFONT={name:'500 18px "JetBrains Mono",Menlo,monospace',memo:'700 13px "JetBrains Mono",Menlo,monospace'};
+function wrapWords(x,text,maxW){
+  const lines=[];let cur='';
+  const fits=s=>x.measureText(s).width<=maxW;
+  for(let w of text.split(/\s+/).filter(Boolean)){
+    // a word too long for any line is broken by characters
+    while(!fits(w)){let i=w.length;while(i>1&&!fits(w.slice(0,i)))i--;if(cur){lines.push(cur);cur='';}lines.push(w.slice(0,i));w=w.slice(i);}
+    if(!w)continue;
+    const next=cur?cur+' '+w:w;
+    if(fits(next))cur=next;else{lines.push(cur);cur=w;}
+  }
+  if(cur)lines.push(cur);
+  return lines;
+}
+async function stealthCardCanvas(a,memo){
   const si=await stealthiconFor(a),k=3;
-  const W=124,H=146,PAD=12,MARK=94,NAME=18;
-  const c=document.createElement('canvas');c.width=W*k;c.height=H*k;
-  const x=c.getContext('2d');x.scale(k,k);
+  const PAD=12,MARK=94,NAME_H=40,MEMO_LH=17,MEMO_GAP=6,MINW=124,MAXW=236;
+  try{await Promise.all([document.fonts.load(CARDFONT.name),document.fonts.load(CARDFONT.memo)]);}catch(e){}
+  memo=(memo||'').trim();
+  const c=document.createElement('canvas'),x=c.getContext('2d');
+  let W=MINW,lines=[];
+  if(memo){
+    x.font=CARDFONT.memo;
+    W=Math.max(MINW,Math.min(MAXW,Math.ceil(x.measureText(memo).width)+PAD*2));
+    lines=wrapWords(x,memo,W-PAD*2);
+  }
+  const markY=PAD+(lines.length?lines.length*MEMO_LH+MEMO_GAP:0),H=markY+MARK+NAME_H;
+  c.width=W*k;c.height=H*k;               // resizing resets the context, so draw from here on
+  c.style.width=W+'px';c.style.height=H+'px';
+  x.scale(k,k);
   x.beginPath();x.roundRect(0.5,0.5,W-1,H-1,10);x.fillStyle=SICARD.panel;x.fill();x.strokeStyle=SICARD.rule;x.lineWidth=1;x.stroke();
-  const img=await imgFrom(svgUrl(si.S.svgAtSize(si.svg,MARK*k)));
-  x.drawImage(img,(W-MARK)/2,PAD,MARK,MARK);
-  try{await document.fonts.load(`500 ${NAME}px "JetBrains Mono"`);}catch(e){}
-  x.font=`500 ${NAME}px "JetBrains Mono",Menlo,monospace`;
-  if('letterSpacing' in x)x.letterSpacing='1px';
   x.fillStyle=SICARD.ink;x.textAlign='center';x.textBaseline='middle';
-  x.fillText(si.name,W/2,PAD+MARK+(H-PAD-MARK)/2);
-  return canvasPng(c);
+  x.font=CARDFONT.memo;
+  lines.forEach((l,i)=>x.fillText(l,W/2,PAD+MEMO_LH*i+MEMO_LH/2));
+  const img=await imgFrom(svgUrl(si.S.svgAtSize(si.svg,MARK*k)));
+  x.drawImage(img,(W-MARK)/2,markY,MARK,MARK);
+  x.font=CARDFONT.name;
+  if('letterSpacing' in x)x.letterSpacing='1px';
+  x.fillText(si.name,W/2,markY+MARK+NAME_H/2);
+  return c;
 }
 function saveBlob(blob,name){
   const u=URL.createObjectURL(blob),l=document.createElement('a');
@@ -1042,11 +1124,23 @@ function copyOrSavePng(btn,make,name,save){
   make().then(b=>{saveBlob(b,name);flashBtn(btn,'Saved');}).catch(e=>{console.warn('[save image]',e);flashBtn(btn,'Failed');});
 }
 document.getElementById('pg-address').addEventListener('click',e=>{
+  const b=e.target.closest('[data-dlg]');if(!b)return;
+  openAddrDialog(b.dataset.dlg,b.closest('.addrbar').dataset.a);
+});
+_dlg().addEventListener('click',e=>{
+  const d=_dlg();
+  // the dialog box itself has no padding, so a click on it is a click on the backdrop
+  if(e.target===d||e.target.closest('[data-close]'))return d.close();
   const btn=e.target.closest('.imgbtn');if(!btn)return;
-  const a=btn.closest('.addr-imgs').dataset.a,act=btn.dataset.act,save=/-save$/.test(act);
+  const a=d.dataset.a,act=btn.dataset.act,save=/-save$/.test(act);
   if(/^qr-/.test(act))copyOrSavePng(btn,()=>qrPng(a),a+'-qr.png',save);
   else if(/^si-/.test(act))copyOrSavePng(btn,()=>stealthMarkPng(a),a+'-stealthicon.png',save);
-  else if(/^card-/.test(act))copyOrSavePng(btn,()=>stealthCardPng(a),a+'-stealthicon-card.png',save);
+  else if(/^card-/.test(act)){const memo=d.querySelector('#siMemo').value;
+    copyOrSavePng(btn,()=>stealthCardCanvas(a,memo).then(canvasPng),a+'-stealthicon-card.png',save);}
+});
+_dlg().addEventListener('input',e=>{
+  if(e.target.id!=='siMemo')return;
+  clearTimeout(_memoT);_memoT=setTimeout(()=>previewCard(_dlg().dataset.a),120);
 });
 async function renderCardPage(p){const tk=(p||'').toUpperCase();const c=DECK.find(x=>x.tk===tk);
   const el=document.getElementById('pg-card');
@@ -1262,7 +1356,7 @@ function setActiveNav(label){document.querySelectorAll('nav.top a').forEach(a=>a
 function route(){
   const seg=location.hash.replace(/^#\/?/,'').split('/');const path=seg[0]||'';const param=seg.slice(1).join('/');
   switch(path){
-    case '':case 'home':show('home');setActiveNav('Explorer');break;
+    case '':case 'home':show('home');setActiveNav('Explorer');if(Date.now()-_lastTick>60000)liveTick();break;
     case 'blocks':renderBlockList(param);show('blocks');setActiveNav('Blocks');break;
     case 'block':renderBlockDetail(param);show('block');setActiveNav('Blocks');break;
     case 'tx':renderTxDetail(param);show('tx');setActiveNav('Explorer');break;
@@ -1351,20 +1445,92 @@ function renderBlockRows(){
 function setStatusTip(height,ts){
   const hb=document.getElementById('sbBlock'),ab=document.getElementById('sbAge');
   if(hb&&height!=null)hb.textContent=Number(height).toLocaleString('en-US');
-  if(ab)ab.innerHTML=ts?`(${ageSpan(ts,true)})`:'';
+  if(ab)ab.innerHTML=ts?`<span class="ssep">·</span> ${ageSpan(ts,true)}`:'';
 }
-// Keep the tip current on every page, or its age would climb past the next block.
-async function refreshTip(){
+// Once a minute the tip is rechecked on every page, or its age would climb
+// past the next block; on the Explorer tab the blocks and stats follow it.
+let _lastTick=0;
+async function liveTick(){
+  _lastTick=Date.now();
   const r=await fetchJSON('/ext/getlastblocks/1');
   const b=r&&r.data&&r.data[0];
   if(b){_chainTip=b.height;setStatusTip(b.height,b.timestamp);}
+  if(homeLive())refreshHome(b);
 }
-setInterval(refreshTip,60000);
+const homeLive=()=>!document.hidden&&!document.getElementById('pg-home').hidden
+  &&document.getElementById('coinView').style.display!=='none';
+setInterval(liveTick,60000);
+// A background tab's timers are throttled, so catch up when it comes back.
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&Date.now()-_lastTick>60000)liveTick();});
+// Only the blocks newer than the table's top one are fetched, so a refresh
+// reads a block or two rather than the hundred a coin switch reads.
+async function refreshHome(tip){
+  const my=_homeReq,coin=_homeCoin,top=_lastBlocks[0];
+  if(!top)return applyLiveHome(coin);
+  let fresh=[];
+  if(tip&&tip.height>top.height){
+    const n=tip.height-top.height;
+    if(n===1)fresh=[tip];
+    else{const r=await fetchJSON('/ext/getlastblocks/'+Math.min(n,100));fresh=((r&&r.data)||[]).filter(b=>b.height>top.height);}
+  }
+  const [sum,cs]=await Promise.all([fetchJSON('/ext/summary'),fetchJSON('/ext/getcoinstats/'+coin)]);
+  if(my!==_homeReq)return;                 // a coin switch has repainted everything since
+  if(fresh.length){_lastBlocks=fresh.concat(_lastBlocks).slice(0,100);slideInBlocks(fresh.length);}
+  if(sum&&sum.data&&sum.data[0])updateStats(homeStats(coin,sum.data[0],cs));
+}
+// New blocks appear at the top while the rows already there slide down to
+// make room, and the rows pushed past the table's length fade out.
+function slideInBlocks(n){
+  const body=document.getElementById('blockbody');if(!body)return;
+  const count=HOMECOUNT.blocks;
+  if(n>=count||!body.rows.length||body.querySelector('.empty')
+     ||window.matchMedia('(prefers-reduced-motion: reduce)').matches)return renderBlockRows();
+  const old=[...body.rows],before=old.map(r=>r.getBoundingClientRect().top);
+  const tmp=document.createElement('tbody');
+  tmp.innerHTML=_lastBlocks.slice(0,n).map(b=>blockRow(b,true)).join('');
+  const added=[...tmp.rows];
+  body.prepend(...added);
+  const leaving=[...body.rows].slice(count);
+  old.forEach((r,i)=>{r.style.transition='none';r.style.transform=`translateY(${before[i]-r.getBoundingClientRect().top}px)`;});
+  added.forEach(r=>{r.style.transition='none';r.style.opacity='0';});
+  body.offsetHeight;                       // commit the starting positions before animating
+  old.forEach(r=>{r.style.transition='transform .7s cubic-bezier(.2,.7,.2,1)';r.style.transform='';});
+  leaving.forEach(r=>{r.style.transition+=',opacity .5s ease';r.style.opacity='0';});
+  added.forEach(r=>{r.style.transition='opacity .5s ease .5s';r.style.opacity='';});
+  setTimeout(()=>{leaving.forEach(r=>r.remove());[...body.rows].forEach(r=>{r.style.transition='';});},1100);
+}
+// Rewrite only the stat figures that changed, decoding each one afresh.
+function updateStats(stat){
+  const cells=document.querySelectorAll('#coinStats .panel');
+  if(cells.length!==stat.length)return;
+  cells.forEach((p,i)=>{
+    const l=p.querySelector('.label'),v=p.querySelector('.b'),val=String(stat[i][1]);
+    if(l.textContent!==stat[i][0])l.textContent=stat[i][0];
+    if(v.dataset.v!==val){v.dataset.v=val;v.textContent=val;if(window.__scramble)window.__scramble(v);}
+  });
+}
+// The four stat figures for a coin. Chain-derived values are live; per-coin
+// metrics we cannot derive show "—"; protocol facts are static.
+function homeStats(coin,s,cs){
+  const supply=coin==='BRK'?grpInt(s.supply):'—';
+  const posDiff=s.difficultyHybrid?grpDiff(String(s.difficultyHybrid).replace(/[^0-9.]/g,'')):'—';
+  const powDiff=s.difficulty?grpDiff(String(s.difficulty).replace(/[^0-9.]/g,'')):'—';
+  // Chain-wide count of addresses holding value, from the daemon's rich list.
+  // It replaced a transaction count, which was the last figure on this page
+  // that needed a transaction index of our own.
+  const addrs=(s&&s.addresses)?grpInt(s.addresses):'—';
+  const holders=(cs&&cs.holders)?grpInt(cs.holders):'—';   // per-currency AddressBalance; fills in after a reindex
+  const coinSupply=(cs&&cs.supply)?grpInt(cs.supply):'—';  // per-currency supply for BRX/SIS
+  if(coin==='BRX') return [['Total Supply (BRX)',coinSupply],['Holders',holders],['Inflation','None · fixed'],['Stakes','Breakout Coin']];
+  if(coin==='SIS') return [['Total Supply (SIS)',coinSupply],['Holders',holders],['Difficulty (PoW)',powDiff],['PoW Reward','50 SIS']];
+  return [['Total Supply (BRK)',supply],['Holders',holders],['Difficulty (PoS)',posDiff],['Unique Addresses',addrs]];
+}
 
 async function applyLiveHome(coin){
   _homeCoin=coin;
   renderCoin(coin);                       // instant placeholder paint; live values overwrite below
   const my=++_homeReq;
+  _lastTick=Date.now();
   const [sum,cs,lbl]=await Promise.all([
     fetchJSON('/ext/summary'),
     fetchJSON('/ext/getcoinstats/'+coin),
@@ -1377,23 +1543,10 @@ async function applyLiveHome(coin){
   if(tipBlk){_chainTip=tipBlk.height;setStatusTip(tipBlk.height,tipBlk.timestamp);}
   else if(s.blockcount){_chainTip=s.blockcount;setStatusTip(s.blockcount,null);}
   const C=COIN[coin]||{color:CCCOLOR[coin]||'var(--text)'};
-  // stat strip — per-coin (matches the design). Chain-derived values are live;
-  // per-coin metrics we cannot derive show "—"; protocol facts are static.
-  const supply=coin==='BRK'?grpInt(s.supply):'—';
-  const posDiff=s.difficultyHybrid?grpDiff(String(s.difficultyHybrid).replace(/[^0-9.]/g,'')):'—';
-  const powDiff=s.difficulty?grpDiff(String(s.difficulty).replace(/[^0-9.]/g,'')):'—';
-  // Chain-wide count of addresses holding value, from the daemon's rich list.
-  // It replaced a transaction count, which was the last figure on this page
-  // that needed a transaction index of our own.
-  const addrs=(s&&s.addresses)?grpInt(s.addresses):'—';
-  const holders=(cs&&cs.holders)?grpInt(cs.holders):'—';   // per-currency AddressBalance; fills in after a reindex
-  const coinSupply=(cs&&cs.supply)?grpInt(cs.supply):'—';  // per-currency supply for BRX/SIS
-  let stat;
-  if(coin==='BRX') stat=[['Total Supply (BRX)',coinSupply],['Holders',holders],['Inflation','None · fixed'],['Stakes','Breakout Coin']];
-  else if(coin==='SIS') stat=[['Total Supply (SIS)',coinSupply],['Holders',holders],['Difficulty (PoW)',powDiff],['PoW Reward','50 SIS']];
-  else stat=[['Total Supply (BRK)',supply],['Holders',holders],['Difficulty (PoS)',posDiff],['Unique Addresses',addrs]];
+  const stat=homeStats(coin,s,cs);         // stat strip — per-coin (matches the design)
   const logo=COINLOGO[coin]||'brk-coin.png';
-  const cell=(x,extra='')=>`<div class="panel ${extra}"><div class="h"><span class="label">${x[0]}</span></div><div class="b" style="color:${C.color}">${x[1]}</div></div>`;
+  // data-v holds each figure as set, since a decode animation rewrites the text
+  const cell=(x,extra='')=>`<div class="panel ${extra}"><div class="h"><span class="label">${x[0]}</span></div><div class="b" style="color:${C.color}" data-v="${esc(x[1])}">${x[1]}</div></div>`;
   const cst=document.getElementById('coinStats');cst.style.setProperty('--cc',C.color);
   cst.innerHTML=cell(stat[0])+cell(stat[1],'inner inner-l')+`<div class="coin-core"><img src="/images/${logo}" alt="${coin}"></div>`+cell(stat[2],'inner inner-r')+cell(stat[3]);
   // latest transactions + blocks — row counts driven by the per-panel switcher
@@ -1454,6 +1607,7 @@ route();
         const els = root.querySelectorAll('.ttx, .sec > .h .ttl, .stats .panel .b');
         els.forEach((el, i) => animate(el, { innerHTML: scrambleText(), duration: 680, delay: Math.min(i * 45, 520) }));
       };
+      window.__scramble = (el) => animate(el, { innerHTML: scrambleText(), duration: 680 });
       animate('.brand',          { innerHTML: scrambleText(), duration: 1100, delay: 150 });
       animate('.ftr-mark',       { innerHTML: scrambleText(), duration: 900,  delay: 900 });
       animate('.deck-meta .num', { innerHTML: scrambleText(), duration: 650,  delay: stagger(70, { start: 600 }) });
