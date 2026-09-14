@@ -192,7 +192,8 @@
   .deck-meta .lab{display:block;margin-top:2px}
   .deck-meta .num{font-size:30px;color:var(--magenta)}
   .deck-controls{display:flex;gap:22px;flex-wrap:wrap;align-items:center;margin-bottom:20px;padding-bottom:18px;border-bottom:1px solid var(--border)}
-  .ctl{display:flex;gap:6px;align-items:center}
+  /* a button group wraps rather than pushing the page wider than a phone */
+  .ctl{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
   .fbtn{font-size:12px;text-transform:uppercase;letter-spacing:.5px;background:var(--bg-2);
     border:1px solid var(--border);color:var(--text-muted);border-radius:4px;padding:8px 12px;cursor:pointer;transition:.12s;min-width:34px}
   .fbtn.red{color:#cd6e8a}
@@ -328,6 +329,9 @@
   .dlg-memo{display:flex;flex-direction:column;gap:6px;width:100%}
   .dlg-memo input{background:var(--bg);border:1px solid var(--border-bright);border-radius:3px;color:var(--text);font-family:var(--body);font-size:13px;padding:8px 10px}
   .dlg-memo input::placeholder{color:var(--text-dim)}
+  /* iOS Safari zooms the page into any text field set below 16px when it takes
+     focus, and leaves it zoomed. On touch screens the fields are 16px. */
+  @media(hover:none) and (pointer:coarse){.dlg-memo input,.topsearch input{font-size:16px}}
   .dlg-btns{display:grid;grid-template-columns:1fr 1fr;gap:6px;width:100%}
   .imgbtn{font-family:var(--body);font-size:11px;text-transform:uppercase;letter-spacing:.4px;white-space:nowrap;color:var(--text-muted);background:var(--bg-2);border:1px solid var(--border);border-radius:3px;padding:6px 8px;cursor:pointer}
   .imgbtn:hover{color:var(--phosphor);border-color:var(--border-bright)}
