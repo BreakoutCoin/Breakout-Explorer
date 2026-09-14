@@ -295,7 +295,7 @@
   .sicard{width:124px;height:124px;display:flex;flex-direction:column;align-items:center;justify-content:space-between}
   .sicard .simark{width:94px;height:94px}
   .sicard .simark svg{display:block;width:100%;height:100%}
-  .sicard .siname{font-family:var(--display);font-size:30px;line-height:24px;height:24px;color:var(--text);letter-spacing:1px}
+  .sicard .siname{font-family:var(--body);font-size:18px;font-weight:500;line-height:24px;height:24px;color:var(--text);letter-spacing:1px}
   .sicard.wait .simark{background:var(--bg-2);border-radius:17px}
   .sicap{font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:var(--text-dim)}
   .sicap:hover{color:var(--phosphor)}
@@ -449,7 +449,6 @@
     <span class="sdot"></span>
     <span class="sb-context"><span>The Deck</span><span class="ssep">/</span><span class="samber">Explorer</span><span class="ssep">/</span><span>Breakout Chain</span><span class="ssep">/</span></span>
     <span>Block <span id="sbBlock">—</span> <span class="sbage" id="sbAge"></span></span><span class="ssep">/</span>
-    <span>Sync <span class="sphos" id="sbSync">100%</span></span><span class="ssep">/</span>
     <a href="#/network" class="sb-peers" title="peer connections — open Network"><span id="sbPeers">—</span> peers</a>
     <div class="theme-toggle">
       <span class="tt-label">Display</span>
@@ -566,7 +565,7 @@
         <div class="ftr-sub">Breakout Chain<br>BRK / BRX / SIS / The Deck</div>
         <p class="ftr-tag">A multicurrency block explorer for Breakout Chain — BRK, BRX, SIS and the 53 NFT cards of The Deck.</p>
         <div class="ftr-chips">
-          <span class="ftr-chip green"><span class="ftr-dot"></span>Live · synced</span>
+          <span class="ftr-chip green"><span class="ftr-dot"></span>Live · synced 100%</span>
           <span class="ftr-chip">Powered by Iquidus</span>
           <span class="ftr-chip ftr-ver">v3.1.0</span>
         </div>
@@ -1006,21 +1005,22 @@ async function stealthMarkPng(a){
   const c=document.createElement('canvas');c.width=c.height=px;c.getContext('2d').drawImage(img,0,0,px,px);
   return canvasPng(c);
 }
-// The card: the mark over its name, drawn as on the page (in the current
-// theme's colours) at three times the size.
+// The card: the mark over its name, at three times the size shown on the
+// page. Its panel, border and ink are the colours of the cards made at
+// stealthicons.stealth.org, so a card reads the same wherever it came from.
+const SICARD={panel:'#F5F7FA',rule:'#C3CDD6',ink:'#101E2A'};
 async function stealthCardPng(a){
   const si=await stealthiconFor(a),k=3;
-  const css=getComputedStyle(document.documentElement),v=n=>css.getPropertyValue(n).trim();
-  const W=124,H=150,PAD=12,MARK=94,NAME=30;
+  const W=124,H=146,PAD=12,MARK=94,NAME=18;
   const c=document.createElement('canvas');c.width=W*k;c.height=H*k;
   const x=c.getContext('2d');x.scale(k,k);
-  x.beginPath();x.roundRect(0.5,0.5,W-1,H-1,8);x.fillStyle=v('--bg-1');x.fill();x.strokeStyle=v('--border');x.lineWidth=1;x.stroke();
+  x.beginPath();x.roundRect(0.5,0.5,W-1,H-1,10);x.fillStyle=SICARD.panel;x.fill();x.strokeStyle=SICARD.rule;x.lineWidth=1;x.stroke();
   const img=await imgFrom(svgUrl(si.S.svgAtSize(si.svg,MARK*k)));
   x.drawImage(img,(W-MARK)/2,PAD,MARK,MARK);
-  try{await document.fonts.load(`${NAME}px VT323`);}catch(e){}
-  x.font=`${NAME}px VT323,"Courier New",monospace`;
+  try{await document.fonts.load(`500 ${NAME}px "JetBrains Mono"`);}catch(e){}
+  x.font=`500 ${NAME}px "JetBrains Mono",Menlo,monospace`;
   if('letterSpacing' in x)x.letterSpacing='1px';
-  x.fillStyle=v('--text');x.textAlign='center';x.textBaseline='middle';
+  x.fillStyle=SICARD.ink;x.textAlign='center';x.textBaseline='middle';
   x.fillText(si.name,W/2,PAD+MARK+(H-PAD-MARK)/2);
   return canvasPng(c);
 }
