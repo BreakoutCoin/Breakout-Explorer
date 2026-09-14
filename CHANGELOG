@@ -1,3 +1,17 @@
+3.3.0
+* address page: the address's currency on the breadcrumb line, and a Currency panel (coin, ticker, name) or NFT panel (card face, ticker, name, linked to the card) before the figures; replaces "Deck cards seen"
+* address page: Balance, Total received and Total sent carry the ticker, and shrink to stay on one line
+* address page: Tx count is the address's whole history (it stopped at 100); /ext/getaddress returns currency and txcount
+* SIS PoW reward follows the client's subsidy schedule (10 SIS since fork 5; it said 50)
+* copy buttons for every transaction ID, block ID and address in the tables
+* labels: Tx ID, Block ID, and Height for block heights, which lose their "#"
+* shortened addresses keep their last six characters (the checksum), with the ellipsis in the middle
+* card-page transaction links work (they pointed at a view that did not exist)
+* phones: no zoom into the memo or search field, a shorter search hint, the Deck view and its controls fit the screen
+* footer: "Powered by Iquidus" joins the copyright line; status bar block height in green
+* Deck filter buttons in the site font
+* README rewritten for Breakout; font licences and card-art provenance added
+
 3.2.0
 * Explorer tab refreshes every minute: new blocks slide into Latest blocks, and the supply, holders, difficulty and address figures update
 * Explorer and Blocks tabs share one block table (height, age or time, type, block ID, txns, reward, forged by); block IDs link to the block, coloured by proof type
