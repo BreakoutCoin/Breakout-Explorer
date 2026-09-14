@@ -150,6 +150,8 @@ app.use('/ext/getaddress/:hash', function(req,res){
     res.send({
       address: hash,
       currency: currs.ticker(r.info.color) || null,
+      // the address's whole history; last_txs holds only the newest `count`
+      txcount: r.info.transactions,
       sent: r.info.sent,
       received: r.info.received,
       balance: String(r.info.balance).replace(/(^-+)/mg, ''),

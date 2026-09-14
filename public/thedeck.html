@@ -987,6 +987,8 @@ async function renderAddress(p){const a=decodeURIComponent(p||'');
     return `<tr><td data-label="Tx hash">${aTxLive(t.txid,cc)}</td><td data-label="Block">${t.blockindex!=null?aBlock(t.blockindex):'—'}</td><td data-label="Direction"><span class="dir ${dir}">${dir}</span></td><td data-label="Amount">${amtCur(amt/1e8,cc)}</td><td class="dim" data-label="Time">${t.timestamp?tsReal(t.timestamp):'—'}</td></tr>`;
   }).join('')||`<tr><td colspan="5"><div class="empty">No transactions indexed.</div></td></tr>`;
   const ccy=info.currency||'';
+  // last_txs is capped at the server's txcount setting; txcount is the whole history
+  const ntx=info.txcount!=null?info.txcount:list.length;
   const tk=ccy?`<span class="tk">${esc(ccy)}</span>`:'';
   el.innerHTML=head(ccy)+`
     <div class="balrow">
@@ -994,9 +996,9 @@ async function renderAddress(p){const a=decodeURIComponent(p||'');
       <div class="panel"><div class="h"><span class="label">Balance</span></div><div class="b" style="color:var(--blue)"><span class="fig">${grpDiff(info.balance)}${tk}</span></div></div>
       <div class="panel"><div class="h"><span class="label">Total received</span></div><div class="b"><span class="fig">${grpDiff(info.received)}${tk}</span></div></div>
       <div class="panel"><div class="h"><span class="label">Total sent</span></div><div class="b"><span class="fig">${grpDiff(info.sent)}</span></div></div>
-      <div class="panel"><div class="h"><span class="label">Tx count</span></div><div class="b"><span class="fig">${grpInt(list.length)}</span></div></div>
+      <div class="panel"><div class="h"><span class="label">Tx count</span></div><div class="b"><span class="fig">${grpInt(ntx)}</span></div></div>
     </div>
-    <div class="sec"><div class="h"><span class="ttl">Transaction history</span><span class="label">latest ${Math.min(list.length,CAP)} of ${list.length}</span></div>
+    <div class="sec"><div class="h"><span class="ttl">Transaction history</span><span class="label">latest ${Math.min(list.length,CAP)} of ${grpInt(ntx)}</span></div>
       <table class="stack"><thead><tr><th>Tx hash</th><th>Block</th><th>Direction</th><th>Amount</th><th>Time</th></tr></thead><tbody>${txrows}</tbody></table>
     </div>`;
   paintStealthicon(a);
