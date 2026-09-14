@@ -314,8 +314,8 @@
   .dlg-b{padding:20px 18px;display:flex;flex-direction:column;align-items:center;gap:16px}
   .dlg-qr{display:block;width:248px;height:248px;image-rendering:pixelated;background:#fff;border-radius:4px}
   .dlg-addr{font-size:12px;color:var(--text-muted);word-break:break-all;text-align:center}
-  .dlg-card{min-height:146px;display:flex;align-items:center;justify-content:center}
-  .dlg-card canvas{display:block;max-width:100%;height:auto!important}
+  .dlg-card{min-height:330px;display:flex;align-items:center;justify-content:center}
+  .dlg-card svg{display:block;max-width:100%;height:auto}
   .dlg-memo{display:flex;flex-direction:column;gap:6px;width:100%}
   .dlg-memo input{background:var(--bg);border:1px solid var(--border-bright);border-radius:3px;color:var(--text);font-family:var(--body);font-size:13px;padding:8px 10px}
   .dlg-memo input::placeholder{color:var(--text-dim)}
@@ -1011,10 +1011,10 @@ function openAddrDialog(kind,a){
 let _cardRun=0,_memoT=null;
 function previewCard(a){
   const my=++_cardRun,d=_dlg(),memo=(d.querySelector('#siMemo')||{}).value||'';
-  stealthCardCanvas(a,memo).then(c=>{
+  stealthCardSvg(a,memo).then(card=>{
     const box=d.querySelector('.dlg-card');
     if(my!==_cardRun||!box||d.dataset.a!==a)return;
-    box.replaceChildren(c);
+    box.innerHTML=card.svg;
   }).catch(e=>{console.warn('[stealthicon]',e);const box=d.querySelector('.dlg-card');if(box)box.innerHTML='<div class="empty">Could not compute the Stealthicon.</div>';});
 }
 // The library is ~100 KB and only this page needs it, so it loads on first use.
@@ -1029,7 +1029,7 @@ function loadStealthicons(){
 // Each Stealthicon costs a memory-hard hash, so compute it once per address.
 const _siMemo={};
 function stealthiconFor(a){
-  if(!_siMemo[a])_siMemo[a]=loadStealthicons().then(S=>S.stealthicon(a).then(i=>({S,name:i.name,svg:i.mark(8).svg})))
+  if(!_siMemo[a])_siMemo[a]=loadStealthicons().then(S=>S.stealthicon(a).then(i=>{const m=i.mark(8);return {S,name:i.name,svg:m.svg,palette:m.palette.list};}))
     .catch(e=>{delete _siMemo[a];throw e;});
   return _siMemo[a];
 }
@@ -1060,51 +1060,105 @@ async function stealthMarkPng(a){
   const c=document.createElement('canvas');c.width=c.height=px;c.getContext('2d').drawImage(img,0,0,px,px);
   return canvasPng(c);
 }
-// The card: an optional memo over the mark over its name, drawn at three
-// times its layout size. Its panel, border and ink are the colours of the
-// cards made at stealthicons.stealth.org, so a card reads the same wherever
-// it came from. A memo widens the card up to a limit, then wraps.
-const SICARD={panel:'#F5F7FA',rule:'#C3CDD6',ink:'#101E2A'};
-const CARDFONT={name:'500 18px "JetBrains Mono",Menlo,monospace',memo:'700 13px "JetBrains Mono",Menlo,monospace'};
-function wrapWords(x,text,maxW){
-  const lines=[];let cur='';
-  const fits=s=>x.measureText(s).width<=maxW;
-  for(let w of text.split(/\s+/).filter(Boolean)){
-    // a word too long for any line is broken by characters
-    while(!fits(w)){let i=w.length;while(i>1&&!fits(w.slice(0,i)))i--;if(cur){lines.push(cur);cur='';}lines.push(w.slice(0,i));w=w.slice(i);}
-    if(!w)continue;
-    const next=cur?cur+' '+w:w;
-    if(fits(next))cur=next;else{lines.push(cur);cur=w;}
+// The card, as stealthicons.stealth.org draws it (buildPanelSvg in the
+// Stealthicons repo's site/index.html, single-mark case): an optional memo,
+// the mark, its name in the darkest of the mark's own colours, the address,
+// and the credit line, as one SVG. Layout, fonts and colours are theirs, so a
+// card from here matches one made there. The dialog shows the SVG itself,
+// which keeps its text sharp at any screen density; copy and save rasterize it.
+const PCOLOR={panelBg:'#F5F7FA',ink:'#101E2A',muted:'#5E7180',rule:'#C3CDD6',address:'#6600CC'};
+const PMONO="ui-monospace,Menlo,Consolas,'DejaVu Sans Mono',monospace";
+const PDISPLAY="Helvetica,'Helvetica Neue',Arial,'Liberation Sans',sans-serif";
+const escXml=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+function svgText(x,y,str,o){
+  o=o||{};
+  let at=`x="${x}" y="${y}" text-anchor="${o.anchor||'middle'}" font-family="${o.family||PMONO}" font-size="${o.size||13}" font-weight="${o.weight||400}" fill="${o.color||PCOLOR.ink}"`;
+  if(o.spacing)at+=` letter-spacing="${o.spacing}"`;
+  if(o.hanging)at+=' dominant-baseline="hanging"';
+  return `<text ${at}>${escXml(str)}</text>`;
+}
+let _measure=null;
+function textWidth(text,size,family,weight){
+  if(!_measure)_measure=document.createElement('canvas').getContext('2d');
+  _measure.font=`${weight||400} ${size}px ${family}`;
+  return _measure.measureText(text).width;
+}
+function wrapByMeasure(text,maxW,size,family,weight){
+  const words=text.split(/\s+/).filter(Boolean);
+  if(!words.length)return [''];
+  const fits=s=>textWidth(s,size,family,weight)<=maxW,lines=[];
+  let cur=words[0];
+  for(let i=1;i<words.length;i++){
+    const next=cur+' '+words[i];
+    if(fits(next)){cur=next;continue;}
+    lines.push(cur);cur=words[i];
+    while(!fits(cur)&&cur.length>1){      // a word wider than the line breaks by characters
+      let fit=cur;while(fit.length>1&&!fits(fit))fit=fit.slice(0,-1);
+      if(fit.length===cur.length)break;
+      lines.push(fit);cur=cur.slice(fit.length);
+    }
   }
-  if(cur)lines.push(cur);
+  lines.push(cur);
   return lines;
 }
-async function stealthCardCanvas(a,memo){
-  const si=await stealthiconFor(a),k=3;
-  const PAD=12,MARK=94,NAME_H=40,MEMO_LH=17,MEMO_GAP=6,MINW=124,MAXW=236;
-  try{await Promise.all([document.fonts.load(CARDFONT.name),document.fonts.load(CARDFONT.memo)]);}catch(e){}
+function wrapMonospace(str,maxW,size,maxLines){
+  const per=Math.max(4,Math.floor(maxW/(size*0.62))),lines=[];
+  for(let i=0;i<str.length&&lines.length<maxLines;i+=per)lines.push(str.slice(i,i+per));
+  if(str.length>per*maxLines){const l=lines[lines.length-1];lines[lines.length-1]=l.slice(0,-1)+'…';}
+  return lines.length?lines:[''];
+}
+function darkestColor(S,list){
+  const cands=[list[1],list[2],list[3]].filter(Boolean);
+  let best=cands[0],lum=S.luminance(best);
+  cands.forEach(c=>{const l=S.luminance(c);if(l<lum){lum=l;best=c;}});
+  // a mark whose darkest dot is still too light for the panel has a dark background to use instead
+  if(S.contrast(best,PCOLOR.panelBg)<4.5)best=list[0];
+  return best;
+}
+function embedIconSvg(svg,x,y,size){
+  const vb=(svg.match(/viewBox="([^"]+)"/)||[null,'0 0 8 8'])[1];
+  // renamed so the card's clip path cannot collide with the same mark elsewhere on the page
+  const inner=svg.replace(/^<svg[^>]*>/,'').replace(/<\/svg>\s*$/,'').replace(/pwclip(\d+)/g,'sicardclip$1');
+  return `<svg x="${x}" y="${y}" width="${size}" height="${size}" viewBox="${vb}">${inner}</svg>`;
+}
+async function stealthCardSvg(a,memo){
+  const si=await stealthiconFor(a);
+  const PAD=16,ICON=176,GAP_STD=8,GAP_MEMO=3.2,GAP_NAME_ADDR=16,PAD_V=18,PAD_TOP=18*1.15;
+  const MEMO_SIZE=18.375,ADDR_SIZE=14.625,NAME_SIZE=30,CARD_MAX_W=285,ADDR_MAX_W=225;
   memo=(memo||'').trim();
-  const c=document.createElement('canvas'),x=c.getContext('2d');
-  let W=MINW,lines=[];
+  let contentW=ICON;
+  if(memo)contentW=Math.max(contentW,Math.min(textWidth(memo,MEMO_SIZE,PDISPLAY,700),CARD_MAX_W-PAD*2));
+  const W=Math.min(CARD_MAX_W,Math.ceil(contentW+PAD*2));
+  contentW=W-PAD*2;
+  let y=PAD_TOP;const parts=[];
   if(memo){
-    x.font=CARDFONT.memo;
-    W=Math.max(MINW,Math.min(MAXW,Math.ceil(x.measureText(memo).width)+PAD*2));
-    lines=wrapWords(x,memo,W-PAD*2);
+    const lines=textWidth(memo,MEMO_SIZE,PDISPLAY,700)<=contentW+0.5?[memo]:wrapByMeasure(memo,contentW,MEMO_SIZE,PDISPLAY,700);
+    lines.forEach(l=>{parts.push(svgText(W/2,y,l,{size:MEMO_SIZE,family:PDISPLAY,weight:700,hanging:true}));y+=22;});
+    y+=GAP_MEMO;
   }
-  const markY=PAD+(lines.length?lines.length*MEMO_LH+MEMO_GAP:0),H=markY+MARK+NAME_H;
-  c.width=W*k;c.height=H*k;               // resizing resets the context, so draw from here on
-  c.style.width=W+'px';c.style.height=H+'px';
-  x.scale(k,k);
-  x.beginPath();x.roundRect(0.5,0.5,W-1,H-1,10);x.fillStyle=SICARD.panel;x.fill();x.strokeStyle=SICARD.rule;x.lineWidth=1;x.stroke();
-  x.fillStyle=SICARD.ink;x.textAlign='center';x.textBaseline='middle';
-  x.font=CARDFONT.memo;
-  lines.forEach((l,i)=>x.fillText(l,W/2,PAD+MEMO_LH*i+MEMO_LH/2));
-  const img=await imgFrom(svgUrl(si.S.svgAtSize(si.svg,MARK*k)));
-  x.drawImage(img,(W-MARK)/2,markY,MARK,MARK);
-  x.font=CARDFONT.name;
-  if('letterSpacing' in x)x.letterSpacing='1px';
-  x.fillText(si.name,W/2,markY+MARK+NAME_H/2);
-  return c;
+  parts.push(embedIconSvg(si.svg,(W-ICON)/2,y,ICON));
+  y+=ICON+GAP_STD;
+  parts.push(`<text x="${W/2}" y="${y}" text-anchor="middle" dominant-baseline="hanging" font-family="${PDISPLAY}" font-weight="700" font-size="${NAME_SIZE}" letter-spacing="-1" fill="${darkestColor(si.S,si.palette)}">${escXml(si.name)}</text>`);
+  y+=NAME_SIZE*1.2+GAP_NAME_ADDR;
+  wrapMonospace(a,Math.min(contentW,ADDR_MAX_W),ADDR_SIZE,6).forEach(l=>{
+    parts.push(svgText(W/2,y,l,{size:ADDR_SIZE,color:PCOLOR.address,family:PMONO}));y+=19;});
+  y+=GAP_STD;
+  parts.push(svgText(W/2,y,'STEALTHICONS by StealthSend',{size:8,color:PCOLOR.muted,weight:600,spacing:0.5,hanging:true}));
+  y+=10+PAD_V;
+  const H=Math.round(y);
+  return {W,H,svg:`<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img">`
+    +`<rect width="${W}" height="${H}" rx="16" fill="${PCOLOR.panelBg}"/>`
+    +`<rect x="0.5" y="0.5" width="${W-1}" height="${H-1}" rx="15.5" fill="none" stroke="${PCOLOR.rule}"/>`
+    +parts.join('')+'</svg>'};
+}
+// Rasterized at three times the card's size; the SVG is given that pixel
+// size so its text and mark are drawn sharp rather than scaled up.
+async function stealthCardPng(a,memo){
+  const k=3,{W,H,svg}=await stealthCardSvg(a,memo);
+  const big=svg.replace(/^<svg([^>]*) width="\d+" height="\d+"/,`<svg$1 width="${W*k}" height="${H*k}"`);
+  const img=await imgFrom(svgUrl(big));
+  const c=document.createElement('canvas');c.width=W*k;c.height=H*k;c.getContext('2d').drawImage(img,0,0,W*k,H*k);
+  return canvasPng(c);
 }
 function saveBlob(blob,name){
   const u=URL.createObjectURL(blob),l=document.createElement('a');
@@ -1136,7 +1190,7 @@ _dlg().addEventListener('click',e=>{
   if(/^qr-/.test(act))copyOrSavePng(btn,()=>qrPng(a),a+'-qr.png',save);
   else if(/^si-/.test(act))copyOrSavePng(btn,()=>stealthMarkPng(a),a+'-stealthicon.png',save);
   else if(/^card-/.test(act)){const memo=d.querySelector('#siMemo').value;
-    copyOrSavePng(btn,()=>stealthCardCanvas(a,memo).then(canvasPng),a+'-stealthicon-card.png',save);}
+    copyOrSavePng(btn,()=>stealthCardPng(a,memo),a+'-stealthicon-card.png',save);}
 });
 _dlg().addEventListener('input',e=>{
   if(e.target.id!=='siMemo')return;
