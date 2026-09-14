@@ -122,9 +122,11 @@
   .btype{font-size:11px;letter-spacing:.06em;border:1px solid var(--border);border-radius:3px;padding:1px 6px}
   .btype.pos{color:var(--brx);border-color:var(--brx)}
   .btype.pow{color:var(--sis);border-color:var(--sis)}
-  /* truncated hash plus its copy button, kept on one line */
-  .bhash{display:inline-flex;align-items:center;white-space:nowrap}
-  .bhash .copybtn{margin-left:6px}
+  /* an ID or address plus its copy button, kept on one line; where the cell is
+     too narrow for both, the ID gives way to an ellipsis, never the button */
+  .bhash{display:inline-flex;align-items:center;white-space:nowrap;max-width:100%;min-width:0;vertical-align:middle}
+  .bhash>a{min-width:0;overflow:hidden;text-overflow:ellipsis}
+  .bhash .copybtn{flex:0 0 auto;margin-left:6px}
   /* block tables: the block ID takes the colour of its proof type, and the
      type column hugs the ID beside it */
   .bid.pos{color:var(--brx)} .bid.pow{color:var(--sis)}
@@ -135,10 +137,7 @@
   }
   a.plain{color:var(--text)}
   a.plain:hover{color:var(--phosphor)}
-  /* rich list: full address plus copy, and right-aligned figures so the
-     magnitudes line up down the column */
-  .rladdr{display:inline-flex;align-items:center;white-space:nowrap}
-  .rladdr .copybtn{margin-left:6px}
+  /* rich list: right-aligned figures so the magnitudes line up down the column */
   .richtable th.amt,.richtable td.amt{text-align:right}
   @media(max-width:760px){.richtable th.amt,.richtable td.amt{text-align:left}}
   .coin-activity > .sec{margin:0}
@@ -233,6 +232,9 @@
   .dinfo .name{font-family:var(--display);font-size:30px;color:var(--text);line-height:1;text-align:center;margin-bottom:4px}
   .dinfo .meta{display:grid;grid-template-columns:1fr 1fr;gap:14px 18px;margin:18px 0 24px}
   .dinfo .meta .v{font-size:15px;color:var(--text);margin-top:4px}
+  /* grid cells holding an address and its copy button shrink to an ellipsis
+     rather than widening their track past the box */
+  .dinfo .meta>div,.kv>.v{min-width:0}
   .prov-h{font-size:12px;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);margin-bottom:16px}
   .timeline{border-left:2px solid var(--border-bright);padding-left:22px;margin-left:5px}
   .ev{position:relative;padding-bottom:20px}
@@ -354,6 +356,9 @@
   .io-col .ioh{padding:11px 18px;background:var(--bg-2);border-bottom:1px solid var(--border);font-size:12px;text-transform:uppercase;letter-spacing:.6px;color:var(--text-muted)}
   .io-col+.io-col{border-left:1px solid var(--border)}
   .io-row{display:flex;justify-content:space-between;gap:12px;padding:11px 18px;border-top:1px solid var(--border);font-size:13px}
+  /* an address on one line with its copy button must not widen its column past
+     the screen; min-width:0 lets it shrink to an ellipsis instead */
+  .io-col,.io-row>span:first-child{min-width:0}
   .io-row:first-of-type{border-top:0}
   @media(max-width:760px){.io-grid{grid-template-columns:1fr}.io-col+.io-col{border-left:0;border-top:1px solid var(--border-bright)}}
   /* address page panels: NFT/Currency first, then the four figures. Where five
@@ -520,7 +525,7 @@
   <nav class="top"><a class="active" href="#/">Explorer</a><a href="#/blocks">Blocks</a><a href="#/movement">Movement</a><a href="#/network">Network</a><a href="#/richlist">Rich List</a><a href="#/api">API</a></nav>
   <form class="topsearch" onsubmit="return false">
     <span class="ts-prompt">›</span>
-    <input type="text" placeholder="Search address · tx hash · block # · card">
+    <input type="text" placeholder="Search address · tx ID · height · card">
   </form>
 </header>
 </div>
@@ -594,7 +599,7 @@
     <div class="sec">
       <div class="h"><span class="ttl">Recent card transfers</span><span class="label">Deck NFT movements</span></div>
       <table class="stack">
-        <thead><tr><th>Card</th><th>From</th><th>To</th><th>Block</th><th>Time</th></tr></thead>
+        <thead><tr><th>Card</th><th>From</th><th>To</th><th>Height</th><th>Time</th></tr></thead>
         <tbody id="cardtxbody"></tbody>
       </table>
     </div>
@@ -669,7 +674,7 @@ async function renderCardTx(){
   const nameFor=cardName;
   body.innerHTML=list.length?list.map(t=>
     `<tr><td data-label="Card"><a class="hash" href="#/card/${t.ticker}" style="display:inline-flex;align-items:center"><img class="micard" src="/images/cards/${t.ticker}.png" alt="${t.ticker}"><span class="cardname">${nameFor(t.ticker)}</span><span class="mtk">${t.ticker}</span></a></td>`
-    +`<td data-label="From">${t.from&&!/coinbase/i.test(t.from)?aAddrLive(t.from):'<span class="dim">mint</span>'}</td><td data-label="To">${t.to?aAddrLive(t.to):'—'}</td><td data-label="Block">${aBlock(t.block)}</td><td data-label="Time">${t.timestamp?tsReal(t.timestamp):'—'}</td></tr>`).join('')
+    +`<td data-label="From">${t.from&&!/coinbase/i.test(t.from)?withCopy(aAddrLive(t.from),t.from):'<span class="dim">mint</span>'}</td><td data-label="To">${t.to?withCopy(aAddrLive(t.to),t.to):'—'}</td><td data-label="Height">${aBlock(t.block)}</td><td data-label="Time">${t.timestamp?tsReal(t.timestamp):'—'}</td></tr>`).join('')
     :`<tr><td colspan="5"><div class="empty">No card transfers indexed yet.</div></td></tr>`;
 }
 // Paints the stat strip with its static placeholder values so the layout is
@@ -735,7 +740,7 @@ async function showDetail(tk){
       <div class="meta">
         <div><span class="label">Ticker</span><div class="v">${c.tk}</div></div>
         <div><span class="label">Supply</span><div class="v">1 / 1</div></div>
-        <div><span class="label">Current holder</span><div class="v">${holder?aAddr(holder):'<span class="dim">—</span>'}</div></div>
+        <div><span class="label">Current holder</span><div class="v">${holder?withCopy(aAddr(holder),holder):'<span class="dim">—</span>'}</div></div>
         <div><span class="label">Transfers</span><div class="v">${Math.max(0,tr.length-1)}</div></div>
         <div><span class="label">Minted</span><div class="v">${mintBlock!=null?'block '+mintBlock:'<span class="dim">—</span>'}</div></div>
       </div>
@@ -782,9 +787,11 @@ document.querySelector('.tt-dark').onclick=()=>document.documentElement.removeAt
 document.querySelector('.tt-light').onclick=()=>document.documentElement.setAttribute('data-theme','light');
 /* ===================== EXPLORER PAGES (Batch A) ===================== */
 function esc(s){return String(s).replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));}
-const aBlock=n=>`<a class="hash" href="#/block/${n}">#${n}</a>`;
+const aBlock=n=>`<a class="hash" href="#/block/${n}">${n}</a>`;
 const aAddr=f=>`<a class="hash" href="#/address/${encodeURIComponent(f)}">${esc(f)}</a>`;
-const aCardTx=(h,tk)=>`<a class="hash" href="#/tx/DECK/${encodeURIComponent(tk)}/${encodeURIComponent(h)}">${esc(h.length>30?h.slice(0,24)+'…':h)}</a>`;
+const aCardTx=(h,tk)=>`<a class="hash" href="#/tx/${encodeURIComponent(h)}" title="${esc(h)}">${esc(h.length>30?h.slice(0,24)+'…':h)}</a>`;
+// a link to an ID or address, followed by a button that copies the whole value
+const withCopy=(link,value)=>`<span class="bhash">${link}${copyBtn(value)}</span>`;
 const snap=()=>'';
 const AGES=['12s','45s','1m','2m','4m','7m','9m','13m','18m','22m','31m','44m','1h','2h','3h'];
 const ageAt=i=>AGES[((i%AGES.length)+AGES.length)%AGES.length]+' ago';
@@ -857,27 +864,27 @@ async function renderBlockList(p){
   if(window.__decode)window.__decode(el);
 }
 async function renderBlockDetail(p){const n=parseInt(p,10);if(isNaN(n)||n<0){location.hash='#/blocks';return;}
-  const head=`<div class="pagehead">${crumb([['Explorer','#/'],['Blocks','#/blocks'],['#'+n,null]])}</div>
-    <h1 class="ptitle"><span class="ttx">Block #${n}</span><span class="entnav">${n>0?`<a href="#/block/${n-1}">‹ prev</a>`:''}<a href="#/block/${n+1}">next ›</a></span></h1>`;
+  const head=`<div class="pagehead">${crumb([['Explorer','#/'],['Blocks','#/blocks'],[String(n),null]])}</div>
+    <h1 class="ptitle"><span class="ttx">Block ${n}</span><span class="entnav">${n>0?`<a href="#/block/${n-1}">‹ prev</a>`:''}<a href="#/block/${n+1}">next ›</a></span></h1>`;
   const el=document.getElementById('pg-block');
-  el.innerHTML=head+`<div class="sec"><div class="empty">Loading block #${n}…</div></div>`;
+  el.innerHTML=head+`<div class="sec"><div class="empty">Loading block ${n}…</div></div>`;
   const r=await fetchJSON('/ext/getblock/'+n);
   if(!r||r.error||!r.block){
-    el.innerHTML=head+`<div class="sec"><div class="empty">Block #${n} isn't indexed yet, or the node has no record of it.</div></div>`;
+    el.innerHTML=head+`<div class="sec"><div class="empty">Block ${n} isn't indexed yet, or the node has no record of it.</div></div>`;
     if(window.__decode)window.__decode(el);return;
   }
   const b=r.block,txs=r.txs||[],ntx=(b.tx&&b.tx.length)||txs.length;
   const txrows=txs.length?txs.map(t=>{
     const totals=(t.totals&&t.totals.length)?t.totals:[[(t.vout&&t.vout[0]&&t.vout[0].currency)||'BRK',String(t.total||0)]];
     const val=totals.map(x=>amtCur(Number(x[1])/1e8,x[0])).join('');
-    return `<tr><td data-label="Tx hash">${aTxLive(t.txid)}</td><td class="amt" data-label="Value">${val}</td><td class="dim" data-label="In / Out">${(t.vin||[]).length} / ${(t.vout||[]).length}</td></tr>`;
+    return `<tr><td data-label="Tx ID">${withCopy(aTxLive(t.txid),t.txid)}</td><td class="amt" data-label="Value">${val}</td><td class="dim" data-label="In / Out">${(t.vin||[]).length} / ${(t.vout||[]).length}</td></tr>`;
   }).join(''):`<tr><td colspan="3"><div class="empty">No indexed transactions for this block.</div></td></tr>`;
   const headR=head.replace('</span></h1>','<a class="rawapi" href="/api/getblock?hash='+encodeURIComponent(b.hash||'')+'" target="_blank" rel="noopener">{ } raw</a></span></h1>');
   el.innerHTML=headR+`
     <div class="sec"><div class="h"><span class="ttl">Block header</span></div>
       <div class="kv">
         <div class="k">Height</div><div class="v mono">${b.height!=null?b.height:n}${copyBtn(b.height!=null?b.height:n)}</div>
-        <div class="k">Hash</div><div class="v mono" style="word-break:break-all">${esc(b.hash||'—')}${b.hash?copyBtn(b.hash):''}</div>
+        <div class="k">Block ID</div><div class="v mono" style="word-break:break-all">${esc(b.hash||'—')}${b.hash?copyBtn(b.hash):''}</div>
         <div class="k">Previous block</div><div class="v">${aBlock(n-1)}</div>
         <div class="k">Next block</div><div class="v">${b.nextblockhash?aBlock(n+1):'<span class="dim">— (tip)</span>'}</div>
         <div class="k">Timestamp</div><div class="v">${b.time?tsReal(b.time):'—'}</div>
@@ -891,7 +898,7 @@ async function renderBlockDetail(p){const n=parseInt(p,10);if(isNaN(n)||n<0){loc
       </div>
     </div>
     <div class="sec"><div class="h"><span class="ttl">Transactions in block</span><span class="label">${ntx} tx</span></div>
-      <table class="stack"><thead><tr><th>Tx hash</th><th>Value</th><th>In / Out</th></tr></thead><tbody>${txrows}</tbody></table>
+      <table class="stack"><thead><tr><th>Tx ID</th><th>Value</th><th>In / Out</th></tr></thead><tbody>${txrows}</tbody></table>
     </div>`;
   if(window.__decode)window.__decode(el);
 }
@@ -909,13 +916,13 @@ function ccyFilterBar(active,base,withCards,noAll){
     return `<a class="fbtn ${on?'on':''}"${style} href="${base}${o[0]}">${o[1]}</a>`;}).join('')+`</div>`;
 }
 async function renderTxDetail(p){p=p||'';const parts=p.split('/');
-  if(parts[0]&&parts[0].toUpperCase()==='DECK'){return renderCardTxDetail(parts[1],parts.slice(2).join('/'));}
-  // [JAMES_HANDOFF change 3/3 — ticker-prefixed tx links] a bare Deck-card ticker prefix
-  // (e.g. #/tx/D4S/<hash>) is a card transfer, not part of the hash — route it to the card
-  // tx view instead of looking up the literal string "D4S/<hash>" and 404-ing.
-  if(parts.length>1&&parts[0].length===3&&parts[0].charAt(0).toUpperCase()==='D'&&!COIN3.includes(parts[0].toUpperCase())){return renderCardTxDetail(parts[0],parts.slice(1).join('/'));}
+  // Older card links carry a prefix: #/tx/DECK/<ticker>/<hash> or #/tx/<ticker>/<hash>.
+  // They were meant for a card-transfer view that was never written, so they
+  // went nowhere. A card transfer is an ordinary transaction, so show it as one.
+  if(parts.length>2&&parts[0].toUpperCase()==='DECK')parts.shift();
   let ccy='',h='';
-  if(parts.length>1&&COIN3.includes(parts[0].toUpperCase())){ccy=parts[0].toUpperCase();h=decodeURIComponent(parts.slice(1).join('/'));}else{h=decodeURIComponent(p);}
+  const pre=parts.length>1?parts[0].toUpperCase():'';
+  if(COIN3.includes(pre)||(pre.length===3&&pre.charAt(0)==='D')){ccy=pre;h=decodeURIComponent(parts.slice(1).join('/'));}else{h=decodeURIComponent(p);}
   const head=`<div class="pagehead">${crumb([['Explorer','#/'],['tx',null]])}</div>
     <h1 class="ptitle"><span class="ttx">Transaction</span> ${ccy?badge(ccy):''}</h1>`;
   const el=document.getElementById('pg-tx');
@@ -933,7 +940,7 @@ async function renderTxDetail(p){p=p||'';const parts=p.split('/');
   const fmtSum=m=>{const k=Object.keys(m);return k.length?k.map(c=>`${grpDec(m[c]/1e8,decFor(c))} ${badge(c)}`).join('<br>'):'<span class="dim">—</span>';};
   const feeVals=(tx.fees||[]).filter(f=>Number(f[1])>0);   // indexer fees go negative on mints (coins created) — not a real fee
   const feeStr=isCoinbase?'<span class="dim">— · newly minted</span>':(feeVals.length?feeVals.map(f=>`${grpDec(Number(f[1])/1e8,decFor(f[0]))} ${badge(f[0])}`).join('<br>'):'<span class="dim">0</span>');
-  const ioRow=x=>{const cb=/coinbase/i.test(x.address||'');const who=cb?'<span class="dim">⟲ coinbase · newly minted</span>':(x.address?aAddr(x.address):'<span class="dim">—</span>');const cc=x.currency||'BRK';return `<div class="io-row"><span>${who}</span><span class="amt">${grpDec((Number(x.amount)||0)/1e8,decFor(cc))} ${badge(cc)}</span></div>`;};
+  const ioRow=x=>{const cb=/coinbase/i.test(x.address||'');const who=cb?'<span class="dim">⟲ coinbase · newly minted</span>':(x.address?withCopy(aAddr(x.address),x.address):'<span class="dim">—</span>');const cc=x.currency||'BRK';return `<div class="io-row"><span>${who}</span><span class="amt">${grpDec((Number(x.amount)||0)/1e8,decFor(cc))} ${badge(cc)}</span></div>`;};
   const ir=vin.length?vin.map(ioRow).join(''):`<div class="io-row"><span class="dim">⟲ no inputs</span><span></span></div>`;
   const or=vout.map(ioRow).join('');
   const tip=await chainTip();
@@ -945,11 +952,11 @@ async function renderTxDetail(p){p=p||'';const parts=p.split('/');
   el.innerHTML=headR+`
     <div class="sec"><div class="h"><span class="ttl">Summary</span></div>
       <div class="kv">
-        <div class="k">Tx hash</div><div class="v mono" style="word-break:break-all">${esc(tx.txid)}${copyBtn(tx.txid)}</div>
+        <div class="k">Tx ID</div><div class="v mono" style="word-break:break-all">${esc(tx.txid)}${copyBtn(tx.txid)}</div>
         ${ccyRow}
         <div class="k">Type</div><div class="v">${kind}</div>
-        <div class="k">Block</div><div class="v">${tx.blockindex!=null?aBlock(tx.blockindex):'<span class="dim">unconfirmed</span>'}</div>
-        <div class="k">Block hash</div><div class="v mono" style="word-break:break-all">${esc(tx.blockhash||'—')}</div>
+        <div class="k">Height</div><div class="v">${tx.blockindex!=null?aBlock(tx.blockindex):'<span class="dim">unconfirmed</span>'}</div>
+        <div class="k">Block ID</div><div class="v mono" style="word-break:break-all">${esc(tx.blockhash||'—')}${tx.blockhash?copyBtn(tx.blockhash):''}</div>
         <div class="k">Timestamp</div><div class="v">${tx.timestamp?tsReal(tx.timestamp):'—'}</div>
         <div class="k">Confirmations</div><div class="v mono">${conf!=null?grpInt(conf):'<span class="dim">—</span>'}</div>
         <div class="k">Total input</div><div class="v amt">${fmtSum(sumBy(vin))}</div>
@@ -984,7 +991,7 @@ async function renderAddress(p){const a=decodeURIComponent(p||'');
     const amt=rel.reduce((s,x)=>s+(Number(x.amount)||0),0);
     const cc=(rel[0]&&rel[0].currency)||'BRK';
     const dir=type==='vout'?'in':'out';
-    return `<tr><td data-label="Tx hash">${aTxLive(t.txid,cc)}</td><td data-label="Block">${t.blockindex!=null?aBlock(t.blockindex):'—'}</td><td data-label="Direction"><span class="dir ${dir}">${dir}</span></td><td data-label="Amount">${amtCur(amt/1e8,cc)}</td><td class="dim" data-label="Time">${t.timestamp?tsReal(t.timestamp):'—'}</td></tr>`;
+    return `<tr><td data-label="Tx ID">${withCopy(aTxLive(t.txid,cc),t.txid)}</td><td data-label="Height">${t.blockindex!=null?aBlock(t.blockindex):'—'}</td><td data-label="Direction"><span class="dir ${dir}">${dir}</span></td><td data-label="Amount">${amtCur(amt/1e8,cc)}</td><td class="dim" data-label="Time">${t.timestamp?tsReal(t.timestamp):'—'}</td></tr>`;
   }).join('')||`<tr><td colspan="5"><div class="empty">No transactions indexed.</div></td></tr>`;
   const ccy=info.currency||'';
   // last_txs is capped at the server's txcount setting; txcount is the whole history
@@ -995,11 +1002,11 @@ async function renderAddress(p){const a=decodeURIComponent(p||'');
       ${identPanel(ccy)}
       <div class="panel"><div class="h"><span class="label">Balance</span></div><div class="b" style="color:var(--blue)"><span class="fig">${grpDiff(info.balance)}${tk}</span></div></div>
       <div class="panel"><div class="h"><span class="label">Total received</span></div><div class="b"><span class="fig">${grpDiff(info.received)}${tk}</span></div></div>
-      <div class="panel"><div class="h"><span class="label">Total sent</span></div><div class="b"><span class="fig">${grpDiff(info.sent)}</span></div></div>
+      <div class="panel"><div class="h"><span class="label">Total sent</span></div><div class="b"><span class="fig">${grpDiff(info.sent)}${tk}</span></div></div>
       <div class="panel"><div class="h"><span class="label">Tx count</span></div><div class="b"><span class="fig">${grpInt(ntx)}</span></div></div>
     </div>
     <div class="sec"><div class="h"><span class="ttl">Transaction history</span><span class="label">latest ${Math.min(list.length,CAP)} of ${grpInt(ntx)}</span></div>
-      <table class="stack"><thead><tr><th>Tx hash</th><th>Block</th><th>Direction</th><th>Amount</th><th>Time</th></tr></thead><tbody>${txrows}</tbody></table>
+      <table class="stack"><thead><tr><th>Tx ID</th><th>Height</th><th>Direction</th><th>Amount</th><th>Time</th></tr></thead><tbody>${txrows}</tbody></table>
     </div>`;
   paintStealthicon(a);
   fitFigures(el);
@@ -1271,8 +1278,8 @@ async function renderCardPage(p){const tk=(p||'').toUpperCase();const c=DECK.fin
     if(t.mint)events+=`<div class="ev mint"><div class="line1">${t.to?aAddr(t.to):'—'} minted in the genesis deck <span class="tag mint">mint</span></div><div class="line2">${when} · reward tx ${aCardTx(t.txid,c.tk)}</div></div>`;
     else events+=`<div class="ev"><div class="line1">transferred to ${t.to?aAddr(t.to):'—'}${now?'<span class="tag now">current</span>':''}</div><div class="line2">${when} · tx ${aCardTx(t.txid,c.tk)}</div></div>`;});
   if(!events)events=`<div class="empty">No movements indexed for ${c.tk} yet.</div>`;
-  const ownRows=tr.length?tr.map((t,i)=>`<tr><td class="dim" data-label="Timestamp">${t.timestamp?tsReal(t.timestamp):'—'}</td><td data-label="Owner">${t.to?aAddr(t.to):'—'}</td><td data-label="Status">${i===tr.length-1?'<span class="dir in">current</span>':'<span class="dim">past</span>'}</td></tr>`).join(''):`<tr><td colspan="3"><div class="empty">—</div></td></tr>`;
-  const histRows=tr.length?tr.map(t=>`<tr><td class="dim" data-label="Timestamp">${t.timestamp?tsReal(t.timestamp):'—'}</td><td data-label="Tx hash">${aCardTx(t.txid,c.tk)}</td><td data-label="Type">${t.mint?'<span class="badge b-DECK" style="padding:1px 5px">reward</span>':'<span class="dim">transfer</span>'}</td></tr>`).join(''):`<tr><td colspan="3"><div class="empty">—</div></td></tr>`;
+  const ownRows=tr.length?tr.map((t,i)=>`<tr><td class="dim" data-label="Timestamp">${t.timestamp?tsReal(t.timestamp):'—'}</td><td data-label="Owner">${t.to?withCopy(aAddr(t.to),t.to):'—'}</td><td data-label="Status">${i===tr.length-1?'<span class="dir in">current</span>':'<span class="dim">past</span>'}</td></tr>`).join(''):`<tr><td colspan="3"><div class="empty">—</div></td></tr>`;
+  const histRows=tr.length?tr.map(t=>`<tr><td class="dim" data-label="Timestamp">${t.timestamp?tsReal(t.timestamp):'—'}</td><td data-label="Tx ID">${withCopy(aCardTx(t.txid,c.tk),t.txid)}</td><td data-label="Type">${t.mint?'<span class="badge b-DECK" style="padding:1px 5px">reward</span>':'<span class="dim">transfer</span>'}</td></tr>`).join(''):`<tr><td colspan="3"><div class="empty">—</div></td></tr>`;
   el.innerHTML=head+`
     <div class="sec"><div class="carddetail">
       <div class="bigcard" style="max-width:none;margin:0"><img src="/images/cards/${c.tk}.png" alt="${c.tk}"><div class="cap">${c.tk} · 1 / 1</div></div>
@@ -1281,7 +1288,7 @@ async function renderCardPage(p){const tk=(p||'').toUpperCase();const c=DECK.fin
           <div class="k">Ticker</div><div class="v">${c.tk}</div>
           <div class="k">Name</div><div class="v">${name}</div>
           <div class="k">Supply</div><div class="v">1 / 1</div>
-          <div class="k">Current holder</div><div class="v">${holder?aAddr(holder):'<span class="dim">—</span>'}</div>
+          <div class="k">Current holder</div><div class="v">${holder?withCopy(aAddr(holder),holder):'<span class="dim">—</span>'}</div>
           <div class="k">Transfers</div><div class="v">${Math.max(0,tr.length-1)}</div>
           <div class="k">Minted</div><div class="v">${mintBlock!=null?'block '+mintBlock:'—'}${tr[0]&&tr[0].timestamp?' <span class="dim">· '+tsReal(tr[0].timestamp)+'</span>':''}</div>
         </div>
@@ -1293,7 +1300,7 @@ async function renderCardPage(p){const tk=(p||'').toUpperCase();const c=DECK.fin
       <table class="stack"><thead><tr><th>Timestamp</th><th>Owner</th><th>Status</th></tr></thead><tbody>${ownRows}</tbody></table>
     </div>
     <div class="sec"><div class="h"><span class="ttl">${c.tk} full transaction history</span><span class="label">${tr.length} tx · chronological</span></div>
-      <table class="stack"><thead><tr><th>Timestamp</th><th>Tx hash</th><th>Type</th></tr></thead><tbody>${histRows}</tbody></table>
+      <table class="stack"><thead><tr><th>Timestamp</th><th>Tx ID</th><th>Type</th></tr></thead><tbody>${histRows}</tbody></table>
     </div>`;
   if(window.__decode)window.__decode(el);
 }
@@ -1335,7 +1342,7 @@ async function renderRichList(p){
     const s=share(r.balance);
     return `<tr>`
       +`<td class="dim" data-label="Rank">${grpInt(r.rank)}</td>`
-      +`<td data-label="Address"><span class="rladdr">${aAddr(r.address)}${copyBtn(r.address)}</span></td>`
+      +`<td data-label="Address">${withCopy(aAddr(r.address),r.address)}</td>`
       +`<td class="amt" data-label="Balance">${grpDec(r.balance,dp)}</td>`
       +`<td class="amt dim" data-label="Share">${s==null?'—':(s<0.0001?'<0.0001':s.toFixed(4))}%</td>`
       +`</tr>`;
@@ -1415,7 +1422,7 @@ async function renderMovement(p){const parts=(p||'').split('/').filter(Boolean);
     if(!big)return '';
     const cc=big.currency||'BRK';
     let from=null;(t.vin||[]).forEach(v=>{if(v.currency===cc&&v.address)from=v.address;});
-    return `<tr><td class="dim" data-label="Timestamp">${t.timestamp?tsReal(t.timestamp):'—'}</td><td data-label="Tx ID">${aTxLive(t.txid,cc)}</td><td data-label="From">${from&&!/coinbase/i.test(from)?aAddrLive(from):'<span class="dim">'+(from?'mint':'—')+'</span>'}</td><td data-label="To">${aAddrLive(big.address)}</td><td data-label="Amount">${amtCur(Number(big.amount)/1e8,cc)}</td></tr>`;
+    return `<tr><td class="dim" data-label="Timestamp">${t.timestamp?tsReal(t.timestamp):'—'}</td><td data-label="Tx ID">${withCopy(aTxLive(t.txid,cc),t.txid)}</td><td data-label="From">${from&&!/coinbase/i.test(from)?withCopy(aAddrLive(from),from):'<span class="dim">'+(from?'mint':'—')+'</span>'}</td><td data-label="To">${withCopy(aAddrLive(big.address),big.address)}</td><td data-label="Amount">${amtCur(Number(big.amount)/1e8,cc)}</td></tr>`;
   }).join(''):`<tr><td colspan="5"><div class="empty">No transfers over ${thCoins.toLocaleString()} on this page.</div></td></tr>`;
   el.innerHTML=head+`
     <div class="sec"><div class="h">${ccyFilterBar(ccy,'#/movement/',false)}<span class="label">large transfers · over ${thCoins.toLocaleString()} · ${grpInt(total)} total</span></div>
@@ -1426,7 +1433,7 @@ async function renderMovement(p){const parts=(p||'').split('/').filter(Boolean);
 }
 function renderApi(){
   const eps=[['GET','/api/getblockcount','Current block height','1396822'],
-    ['GET','/api/getblockhash?index={n}','Block hash at height n','000000237fb0b1439548e01fd6b0adebe89f7367…'],
+    ['GET','/api/getblockhash?index={n}','Block ID at height n','000000237fb0b1439548e01fd6b0adebe89f7367…'],
     ['GET','/api/getblock?hash={hash}','Full block by hash','{ "height": 5, "tx": [ … ] }'],
     ['GET','/api/getrawtransaction?txid={id}&decrypt=1','Decoded transaction','{ "txid": "d399…", "vout": [ … ] }'],
     ['GET','/ext/getaddress/{address}','Address balance + history','{ "balance": 12480.5, "txs": [ … ] }'],
