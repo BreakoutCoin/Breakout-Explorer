@@ -1,3 +1,13 @@
+3.2.0
+* Explorer tab refreshes every minute: new blocks slide into Latest blocks, and the supply, holders, difficulty and address figures update
+* Explorer and Blocks tabs share one block table (height, age or time, type, block ID, txns, reward, forged by); block IDs link to the block, coloured by proof type
+* status bar shows the tip's age and stays current on every page; it and the header stay at the top of the page
+* address page: a bar with the address's Stealthicon, the address, and buttons for its QR code and Stealthicon
+* QR code dialog, with the real QR code (it was a placeholder pattern), copyable and saveable as PNG
+* Stealthicon dialog, with the mark and the canonical Stealthicons card (optional memo) copyable and saveable as PNG; Stealthicons library vendored
+* copy buttons are an icon; Movement's Tx hash column is Tx ID
+* footer: version as its own chip, link columns at natural width, sync figure moved to the Live chip
+
 3.1.0
 * /ext serves addresses, rich list, supply, distribution, transactions, blocks, movement and the Deck from the daemon's indexes
 * movement ignores stake self-returns and change back to a sender; the cutoff follows settings.movement.min_amount
