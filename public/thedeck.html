@@ -184,7 +184,7 @@
   /* little card icon inside a transaction row */
   .micard{width:24px;height:35px;background:var(--qt-gray);border-radius:2px;vertical-align:middle;margin-right:10px}
   .cardname{color:var(--text);vertical-align:middle}
-  .mtk{color:var(--text-dim);font-size:11px;margin-left:8px;vertical-align:middle}
+  .mtk{color:var(--text-dim);font-size:11px;margin-left:8px;vertical-align:middle;white-space:nowrap}
 
   /* ---------- DECK GALLERY ---------- */
   .deckwrap{padding:22px}
@@ -194,7 +194,7 @@
   .deck-controls{display:flex;gap:22px;flex-wrap:wrap;align-items:center;margin-bottom:20px;padding-bottom:18px;border-bottom:1px solid var(--border)}
   /* a button group wraps rather than pushing the page wider than a phone */
   .ctl{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
-  .fbtn{font-size:12px;text-transform:uppercase;letter-spacing:.5px;background:var(--bg-2);
+  .fbtn{font-family:var(--body);font-size:12px;text-transform:uppercase;letter-spacing:.5px;background:var(--bg-2);
     border:1px solid var(--border);color:var(--text-muted);border-radius:4px;padding:8px 12px;cursor:pointer;transition:.12s;min-width:34px}
   .fbtn.red{color:#cd6e8a}
   .fbtn:hover{color:var(--text);border-color:var(--border-bright)}
@@ -242,6 +242,10 @@
   .ev::before{content:'';position:absolute;left:-28px;top:4px;width:10px;height:10px;border-radius:50%;background:var(--magenta)}
   .ev.mint::before{background:var(--phosphor)}
   .ev .line1{font-size:15px}
+  /* a provenance line holds a whole address, which may break anywhere rather
+     than widen the Deck's columns past a phone screen */
+  .ev .line1,.ev .line2{overflow-wrap:anywhere}
+  .deck-layout>.sec{min-width:0}
   .ev .line1 .who{color:var(--phosphor)}
   .ev .line2{font-size:12px;color:var(--text-dim);margin-top:3px}
   .tag{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;padding:2px 7px;border-radius:3px;margin-left:8px}
