@@ -40,14 +40,17 @@
   .mock-banner{background:var(--bg-2);border-bottom:1px solid var(--border);color:var(--text-muted);
     font-size:12px;letter-spacing:.3px;text-align:center;padding:8px}
   .mock-banner b{color:var(--amber)}
-  /* sticky status bar */
-  .statusbar{position:sticky;top:0;z-index:50;background:var(--bg);border-bottom:1px solid var(--border);font-size:12px;letter-spacing:.05em;text-transform:uppercase;color:var(--text-muted);transition:background .3s}
+  /* status bar and header frozen together at the top; --topfix-h (set from
+     script) is their combined height, for anything else that sticks below */
+  .topfix{position:sticky;top:0;z-index:50}
+  .statusbar{background:var(--bg);border-bottom:1px solid var(--border);font-size:12px;letter-spacing:.05em;text-transform:uppercase;color:var(--text-muted);transition:background .3s}
   .statusbar-inner{display:flex;flex-wrap:wrap;align-items:center;gap:.4rem 1.3rem;padding:9px 32px}
   .sb-peers{color:inherit;text-decoration:none}
   .sb-peers #sbPeers{color:var(--phosphor)}
   .sb-peers:hover{color:var(--phosphor)}
   .sdot{width:7px;height:7px;border-radius:1px;background:var(--phosphor);box-shadow:0 0 4px var(--phosphor);animation:blink-dot 1.4s infinite}
   .ssep{color:var(--border-bright)}
+  .sbage{text-transform:none}
   .samber{color:var(--amber)} .sphos{color:var(--phosphor)}
   .theme-toggle{margin-left:auto;color:var(--text-muted);display:inline-flex;gap:8px;align-items:center}
   .tt-opt{cursor:pointer;transition:color .12s}
@@ -121,11 +124,21 @@
   .btype.pow{color:var(--sis);border-color:var(--sis)}
   /* truncated hash plus its copy button, kept on one line */
   .bhash{display:inline-flex;align-items:center;white-space:nowrap}
-  .bhash .copybtn{margin-left:6px;padding:1px 6px;font-size:10px}
+  .bhash .copybtn{margin-left:6px}
+  /* block tables: the block ID takes the colour of its proof type, and the
+     type column hugs the ID beside it */
+  .bid.pos{color:var(--brx)} .bid.pow{color:var(--sis)}
+  .bid:hover{text-decoration:underline}
+  @media(min-width:641px){
+    .blocktable .c-type{width:1%;white-space:nowrap;padding-right:4px}
+    .blocktable .c-bid{padding-left:8px}
+  }
+  a.plain{color:var(--text)}
+  a.plain:hover{color:var(--phosphor)}
   /* rich list: full address plus copy, and right-aligned figures so the
      magnitudes line up down the column */
   .rladdr{display:inline-flex;align-items:center;white-space:nowrap}
-  .rladdr .copybtn{margin-left:6px;padding:1px 6px;font-size:10px}
+  .rladdr .copybtn{margin-left:6px}
   .richtable th.amt,.richtable td.amt{text-align:right}
   @media(max-width:760px){.richtable th.amt,.richtable td.amt{text-align:left}}
   .coin-activity > .sec{margin:0}
@@ -195,7 +208,7 @@
   /* 2/3 gallery + 1/3 sticky detail */
   .deck-layout{display:grid;grid-template-columns:minmax(0,1.85fr) minmax(340px,1fr);gap:20px;align-items:start;margin:20px 0}
   .deck-layout > .sec{margin:0}
-  .detail-panel{position:sticky;top:18px}
+  .detail-panel{position:sticky;top:calc(var(--topfix-h,0px) + 18px)}
   @media(max-width:1100px){.deck-layout{grid-template-columns:1fr}.detail-panel{position:static}}
   .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(79px,1fr));gap:14px;justify-items:center}
   .card{background:transparent;border-radius:5px;padding:0;overflow:hidden;line-height:0;cursor:pointer;
@@ -234,11 +247,14 @@
   /* ---------- pro footer (adapted from the redesign) ---------- */
   .ftr{border-top:1px solid var(--border);background:linear-gradient(to bottom,var(--bg-1),var(--bg));padding:46px 0 26px}
   .ftr-inner{width:92%;max-width:1680px;margin:0 auto}
-  .ftr-top{display:grid;grid-template-columns:1.7fr 1fr 1fr 1fr;gap:44px;padding-bottom:34px;border-bottom:1px solid var(--border)}
-  @media(max-width:860px){.ftr-top{grid-template-columns:1fr 1fr;gap:30px}}
+  /* the link columns sit at their natural width a fixed distance apart; the
+     brand panel takes whatever width is left */
+  .ftr-top{display:grid;grid-template-columns:minmax(0,1fr) repeat(3,max-content);gap:34px 64px;padding-bottom:34px;border-bottom:1px solid var(--border)}
+  @media(max-width:860px){.ftr-top{grid-template-columns:repeat(3,max-content);gap:30px 40px}.ftr-brand{grid-column:1/-1}}
+  @media(max-width:520px){.ftr-top{grid-template-columns:1fr 1fr}}
   .ftr-mark{font-family:var(--display);font-size:34px;line-height:1;color:var(--text);margin-bottom:8px}
   .ftr-sub{font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-muted);margin-bottom:18px}
-  .ftr-ver{text-transform:none;color:var(--amber)}
+  .ftr-chip.ftr-ver{text-transform:none;color:var(--amber);border-color:color-mix(in srgb,var(--amber) 35%,transparent)}
   .ftr-tag{font-size:14px;line-height:1.65;color:var(--text-muted);max-width:380px;margin:0 0 20px}
   .ftr-chips{display:flex;gap:8px;flex-wrap:wrap}
   .ftr-chip{font-size:11px;letter-spacing:1px;text-transform:uppercase;padding:6px 11px;border:1px solid var(--border);color:var(--text-muted);background:var(--bg-1)}
@@ -264,8 +280,25 @@
   .ptitle{font-family:var(--display);font-size:34px;color:var(--text);line-height:1;margin:8px 0 2px;display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
   .sampletag{font-family:var(--body);font-size:10px;letter-spacing:.5px;text-transform:uppercase;color:var(--amber);border:1px solid rgba(243,168,59,.4);border-radius:3px;padding:2px 7px}
   .pagenote{font-size:11px;color:var(--text-dim);letter-spacing:.4px;padding:10px 18px;border-top:1px solid var(--border)}
-  .copybtn{cursor:pointer;color:var(--text-dim);border:1px solid var(--border);border-radius:3px;font-size:11px;padding:2px 8px;margin-left:8px;font-family:var(--body);background:var(--bg-2)}
+  .copybtn{cursor:pointer;color:var(--text-muted);border:1px solid var(--border);border-radius:3px;line-height:0;padding:3px;margin-left:8px;background:var(--bg-2);vertical-align:middle}
   .copybtn:hover{color:var(--phosphor);border-color:var(--border-bright)}
+  .copybtn.done{color:var(--phosphor)}
+  /* address page: QR code and Stealthicon side by side, each with its buttons */
+  .addr-imgs{display:flex;gap:22px;align-items:flex-start;flex-wrap:wrap}
+  .aimg{display:flex;flex-direction:column;align-items:center;gap:8px}
+  .aimg .qr{display:block;min-width:124px;min-height:124px;image-rendering:pixelated;border-radius:4px;background:#fff}
+  .aimg-btns{display:grid;grid-template-columns:1fr 1fr;gap:4px;width:100%}
+  .imgbtn{font-family:var(--body);font-size:10px;text-transform:uppercase;letter-spacing:.4px;white-space:nowrap;color:var(--text-muted);background:var(--bg-2);border:1px solid var(--border);border-radius:3px;padding:3px 7px;cursor:pointer}
+  .imgbtn:hover{color:var(--phosphor);border-color:var(--border-bright)}
+  .imgbtn.done{color:var(--phosphor);border-color:color-mix(in srgb,var(--phosphor) 45%,var(--border-bright))}
+  /* the Stealthicon card as shown: the mark over its name, together no taller than the QR code */
+  .sicard{width:124px;height:124px;display:flex;flex-direction:column;align-items:center;justify-content:space-between}
+  .sicard .simark{width:94px;height:94px}
+  .sicard .simark svg{display:block;width:100%;height:100%}
+  .sicard .siname{font-family:var(--display);font-size:30px;line-height:24px;height:24px;color:var(--text);letter-spacing:1px}
+  .sicard.wait .simark{background:var(--bg-2);border-radius:17px}
+  .sicap{font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:var(--text-dim)}
+  .sicap:hover{color:var(--phosphor)}
   .kv{display:grid;grid-template-columns:max-content 1fr}
   .kv .k{padding:11px 18px;border-top:1px solid var(--border);color:var(--text-muted);font-size:12px;text-transform:uppercase;letter-spacing:.6px;white-space:nowrap;background:var(--bg-2)}
   .kv .v{padding:11px 18px;border-top:1px solid var(--border);font-size:14px;word-break:break-all}
@@ -394,6 +427,7 @@
       padding:9px 14px;border-top:1px solid var(--border);text-align:left;white-space:normal;word-break:break-word;font-size:13.5px}
     table.stack tbody tr td:first-child{border-top:0}
     table.stack td::before{content:attr(data-label);font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.6px;color:var(--text-muted);line-height:1.5;padding-top:2px}
+    table.stack td > .btype{justify-self:start}
     table.stack td[colspan]{display:block;text-align:center}
     table.stack td[colspan]::before{display:none}
   }
@@ -409,11 +443,12 @@
 </style>
 </head>
 <body>
+<div class="topfix">
 <div class="statusbar">
   <div class="statusbar-inner">
     <span class="sdot"></span>
     <span class="sb-context"><span>The Deck</span><span class="ssep">/</span><span class="samber">Explorer</span><span class="ssep">/</span><span>Breakout Chain</span><span class="ssep">/</span></span>
-    <span id="sbBlock">Block 1,396,822</span><span class="ssep">/</span>
+    <span>Block <span id="sbBlock">—</span> <span class="sbage" id="sbAge"></span></span><span class="ssep">/</span>
     <span>Sync <span class="sphos" id="sbSync">100%</span></span><span class="ssep">/</span>
     <a href="#/network" class="sb-peers" title="peer connections — open Network"><span id="sbPeers">—</span> peers</a>
     <div class="theme-toggle">
@@ -432,6 +467,7 @@
     <input type="text" placeholder="Search address · tx hash · block # · card">
   </form>
 </header>
+</div>
 
 <div class="wrap">
   <div class="page" id="pg-home">
@@ -448,8 +484,8 @@
     <div class="coin-activity one">
       <div class="sec">
         <div class="h"><span class="ttl">Latest blocks</span><span class="hctl"><span class="rowcount" data-for="blocks"><button type="button" data-n="10" class="on">10</button><button type="button" data-n="25">25</button><button type="button" data-n="50">50</button><button type="button" data-n="100">100</button></span><a class="label" href="#/blocks">view all ↗</a></span></div>
-        <table class="stack">
-          <thead><tr><th>Block</th><th>Time</th><th>Type</th><th>Reward</th><th>Hash</th><th>Txns</th><th>Forged by</th></tr></thead>
+        <table class="stack blocktable">
+          <thead><tr><th>Height</th><th>Age</th><th class="c-type">Type</th><th class="c-bid">Block ID</th><th>Txns</th><th>Reward</th><th>Forged by</th></tr></thead>
           <tbody id="blockbody"></tbody>
         </table>
       </div>
@@ -527,11 +563,12 @@
     <div class="ftr-top">
       <div class="ftr-brand">
         <div class="ftr-mark">Breakout Explorer</div>
-        <div class="ftr-sub">Breakout Chain · BRK / BRX / SIS / The Deck · <span class="ftr-ver">v3.1.0</span></div>
+        <div class="ftr-sub">Breakout Chain<br>BRK / BRX / SIS / The Deck</div>
         <p class="ftr-tag">A multicurrency block explorer for Breakout Chain — BRK, BRX, SIS and the 53 NFT cards of The Deck.</p>
         <div class="ftr-chips">
           <span class="ftr-chip green"><span class="ftr-dot"></span>Live · synced</span>
           <span class="ftr-chip">Powered by Iquidus</span>
+          <span class="ftr-chip ftr-ver">v3.1.0</span>
         </div>
       </div>
       <div class="ftr-col"><div class="ftr-col-t">Explorer</div>
@@ -701,17 +738,20 @@ function fakeHash(seed){let x=2166136261>>>0;const s='h'+seed;for(let k=0;k<s.le
 const GENESIS_MS=Date.UTC(2016,5,11,0,0,0);
 const MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 function tsFor(block){const d=new Date(GENESIS_MS+block*226000);const p=n=>String(n).padStart(2,'0');return `${d.getUTCDate()} ${MON[d.getUTCMonth()]} ${d.getUTCFullYear()} ${p(d.getUTCHours())}:${p(d.getUTCMinutes())}:${p(d.getUTCSeconds())}`;}
-function fauxQR(str){const n=21,m=5;let x=2166136261>>>0;for(const ch of(str||'x'))x=Math.imul((x^ch.charCodeAt(0))>>>0,16777619)>>>0;
-  const bit=()=>{x=(Math.imul(x,1103515245)+12345)>>>0;return (x>>>9)&1;};
-  const fnd=(r,c)=>r===0||r===6||c===0||c===6||(r>=2&&r<=4&&c>=2&&c<=4);
-  let rects='';for(let r=0;r<n;r++)for(let c=0;c<n;c++){let on;
-    if(r<7&&c<7)on=fnd(r,c);else if(r<7&&c>=n-7)on=fnd(r,c-(n-7));else if(r>=n-7&&c<7)on=fnd(r-(n-7),c);else on=bit();
-    if(on)rects+=`<rect x="${c*m}" y="${r*m}" width="${m}" height="${m}"/>`;}
-  const px=n*m;return `<svg width="${px}" height="${px}" viewBox="0 0 ${px} ${px}" xmlns="http://www.w3.org/2000/svg" style="background:#fff;padding:7px;border-radius:4px;box-sizing:content-box"><g fill="#0a0b0d">${rects}</g></svg>`;}
 const rawLink=()=>`<a class="rawapi" href="#/soon" title="View raw API">{ } raw</a>`;
 const sample=()=>'';
 function crumb(parts){return '<nav class="crumb">'+parts.map((p,i)=>{const sep=i<parts.length-1?'<span class="sep">/</span>':'';return (p[1]?`<a href="${p[1]}">${p[0]}</a>`:`<span class="cur">${p[0]}</span>`)+sep;}).join('')+'</nav>';}
-function copyBtn(t){return `<button class="copybtn" data-c="${esc(t)}" onclick="navigator.clipboard&&navigator.clipboard.writeText(this.dataset.c)">⧉ copy</button>`;}
+const COPYICON='<svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="5.5" y="5.5" width="9" height="9" rx="1.5"/><path d="M10.5 3V2.5a1 1 0 0 0-1-1h-7a1 1 0 0 0-1 1v7a1 1 0 0 0 1 1H3"/></svg>';
+const CHECKICON='<svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 8.5l3.2 3L13 4.5"/></svg>';
+function copyBtn(t){return `<button class="copybtn" type="button" title="Copy" aria-label="Copy" data-c="${esc(t)}" onclick="copyText(this)">${COPYICON}</button>`;}
+function copyText(b){if(!navigator.clipboard)return;navigator.clipboard.writeText(b.dataset.c).then(()=>flashBtn(b,CHECKICON),()=>{});}
+// Briefly swap a button's label to confirm what it did. The original label is
+// captured once, so a second click during the flash cannot make "Copied" stick.
+function flashBtn(b,html){
+  if(b._flashT)clearTimeout(b._flashT);else b._flashOrig=b.innerHTML;
+  b.innerHTML=html;b.classList.add('done');
+  b._flashT=setTimeout(()=>{b.innerHTML=b._flashOrig;b.classList.remove('done');b._flashT=null;},1400);
+}
 function pager(page,total,base){
   if(total<=1)return '';
   const b=(l,p)=>p?`<a class="pgbtn" href="${base}${p}">${l}</a>`:`<span class="pgbtn dis">${l}</span>`;
@@ -750,10 +790,10 @@ async function renderBlockList(p){
   el.innerHTML=head+`<div class="sec"><div class="empty">Loading blocks…</div></div>`;
   const r=await fetchJSON('/ext/getblockpage/'+page);
   const bl=(r&&r.data)||[],pages=(r&&r.pages)||1,total=(r&&r.total)||bl.length;
-  const rows=bl.length?bl.map(b=>`<tr><td data-label="Height">${aBlock(b.height)}</td><td class="dim" data-label="Timestamp">${b.timestamp?tsReal(b.timestamp):'—'}</td><td data-label="Txns">${b.txns}</td><td data-label="Forged by">${b.forger?aAddrLive(b.forger):'<span class="dim">—</span>'}</td></tr>`).join(''):`<tr><td colspan="4"><div class="empty">No blocks indexed yet.</div></td></tr>`;
+  const rows=bl.length?bl.map(b=>blockRow(b,false)).join(''):`<tr><td colspan="7"><div class="empty">No blocks indexed yet.</div></td></tr>`;
   el.innerHTML=head+`
     <div class="sec"><div class="h"><span class="ttl">Block list</span><span class="label">${grpInt(total)} indexed · newest first</span></div>
-      <table class="stack"><thead><tr><th>Height</th><th>Timestamp</th><th>Txns</th><th>Forged by</th></tr></thead><tbody>${rows}</tbody></table>
+      <table class="stack blocktable"><thead>${blockHead(false)}</thead><tbody>${rows}</tbody></table>
       ${pager(page,pages,'#/blocks/')}
     </div>`;
   if(window.__decode)window.__decode(el);
@@ -868,13 +908,15 @@ async function renderAddress(p){const a=decodeURIComponent(p||'');
   const head=`<div class="pagehead">${crumb([['Explorer','#/'],['Address',null]])}</div>
     <div class="addr-head">
       <div class="ahl"><h1 class="ptitle" style="font-size:22px;word-break:break-all;margin-top:6px"><span class="ttx">${esc(a)||'—'}</span>${copyBtn(a)}</h1></div>
-      <div class="ahq">${fauxQR(a)}</div>
+      <div class="ahq">${addrImages(a)}</div>
     </div>`;
   const el=document.getElementById('pg-address');
   el.innerHTML=head+`<div class="sec"><div class="empty">Loading address…</div></div>`;
+  paintStealthicon(a);
   const info=await fetchJSON('/ext/getaddress/'+encU(a));
   if(!info||info.error||info.address==null){
     el.innerHTML=head+`<div class="sec"><div class="empty">No activity indexed for this address yet.</div></div>`;
+    paintStealthicon(a);
     if(window.__decode)window.__decode(el);return;
   }
   const list=(info.last_txs||[]);
@@ -904,8 +946,108 @@ async function renderAddress(p){const a=decodeURIComponent(p||'');
     <div class="sec"><div class="h"><span class="ttl">Transaction history</span><span class="label">latest ${Math.min(list.length,CAP)} of ${list.length}</span></div>
       <table class="stack"><thead><tr><th>Tx hash</th><th>Block</th><th>Direction</th><th>Amount</th><th>Time</th></tr></thead><tbody>${txrows}</tbody></table>
     </div>`;
+  paintStealthicon(a);
   if(window.__decode)window.__decode(el);
 }
+/* ---- address images: QR code and Stealthicon, each copyable and saveable as PNG ---- */
+const STEALTHICONS_URL='https://stealthicons.stealth.org/';
+function addrImages(a){
+  return `<div class="addr-imgs" data-a="${esc(a)}">`
+    +`<div class="aimg"><img class="qr" src="/qr/${encU(a)}" alt="QR code for ${esc(a)}">`
+    +`<div class="aimg-btns"><button class="imgbtn" type="button" data-act="qr-copy">Copy Image</button><button class="imgbtn" type="button" data-act="qr-save">Save Image</button></div></div>`
+    +`<div class="aimg"><div class="sicard wait" title="Stealthicon"><div class="simark"></div><div class="siname">&nbsp;</div></div>`
+    +`<div class="aimg-btns"><button class="imgbtn" type="button" data-act="si-copy">Copy Image</button><button class="imgbtn" type="button" data-act="si-save">Save Image</button>`
+    +`<button class="imgbtn" type="button" data-act="card-copy">Copy Card</button><button class="imgbtn" type="button" data-act="card-save">Save Card</button></div>`
+    +`<a class="sicap" href="${STEALTHICONS_URL}" target="_blank" rel="noopener">Stealthicons ↗</a></div>`
+    +`</div>`;
+}
+// The library is ~100 KB and only this page needs it, so it loads on first use.
+let _siLib=null;
+function loadStealthicons(){
+  if(window.Stealthicons)return Promise.resolve(window.Stealthicons);
+  if(!_siLib)_siLib=new Promise((res,rej)=>{const s=document.createElement('script');s.src='/vendor/stealthicons/stealthicons.js';
+    s.onload=()=>window.Stealthicons?res(window.Stealthicons):rej(new Error('Stealthicons missing'));
+    s.onerror=()=>{_siLib=null;rej(new Error('Stealthicons failed to load'));};document.head.appendChild(s);});
+  return _siLib;
+}
+// Each Stealthicon costs a memory-hard hash, so compute it once per address.
+const _siMemo={};
+function stealthiconFor(a){
+  if(!_siMemo[a])_siMemo[a]=loadStealthicons().then(S=>S.stealthicon(a).then(i=>({S,name:i.name,svg:i.mark(8).svg})))
+    .catch(e=>{delete _siMemo[a];throw e;});
+  return _siMemo[a];
+}
+// The address page re-renders its header as data arrives, so this fills in
+// whichever copy of the Stealthicon box is on the page when the icon is ready.
+function paintStealthicon(a){
+  stealthiconFor(a).then(si=>{
+    const box=document.querySelector('#pg-address .addr-imgs');
+    if(!box||box.dataset.a!==a)return;
+    const card=box.querySelector('.sicard');
+    card.querySelector('.simark').innerHTML=si.svg;
+    card.querySelector('.siname').textContent=si.name;
+    card.classList.remove('wait');
+  }).catch(e=>console.warn('[stealthicon]',e));
+}
+function imgFrom(src){return new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=()=>rej(new Error('image load failed'));i.src=src;});}
+function canvasPng(c){return new Promise((res,rej)=>c.toBlob(b=>b?res(b):rej(new Error('toBlob failed')),'image/png'));}
+const svgUrl=svg=>'data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svg);
+// The QR code, scaled up by whole pixels so its modules stay sharp.
+async function qrPng(a){
+  const img=await imgFrom('/qr/'+encU(a));
+  const k=Math.max(1,Math.ceil(372/img.naturalWidth));
+  const c=document.createElement('canvas');c.width=img.naturalWidth*k;c.height=img.naturalHeight*k;
+  const x=c.getContext('2d');x.imageSmoothingEnabled=false;x.drawImage(img,0,0,c.width,c.height);
+  return canvasPng(c);
+}
+async function stealthMarkPng(a){
+  const si=await stealthiconFor(a),px=512;
+  const img=await imgFrom(svgUrl(si.S.svgAtSize(si.svg,px)));
+  const c=document.createElement('canvas');c.width=c.height=px;c.getContext('2d').drawImage(img,0,0,px,px);
+  return canvasPng(c);
+}
+// The card: the mark over its name, drawn as on the page (in the current
+// theme's colours) at three times the size.
+async function stealthCardPng(a){
+  const si=await stealthiconFor(a),k=3;
+  const css=getComputedStyle(document.documentElement),v=n=>css.getPropertyValue(n).trim();
+  const W=124,H=150,PAD=12,MARK=94,NAME=30;
+  const c=document.createElement('canvas');c.width=W*k;c.height=H*k;
+  const x=c.getContext('2d');x.scale(k,k);
+  x.beginPath();x.roundRect(0.5,0.5,W-1,H-1,8);x.fillStyle=v('--bg-1');x.fill();x.strokeStyle=v('--border');x.lineWidth=1;x.stroke();
+  const img=await imgFrom(svgUrl(si.S.svgAtSize(si.svg,MARK*k)));
+  x.drawImage(img,(W-MARK)/2,PAD,MARK,MARK);
+  try{await document.fonts.load(`${NAME}px VT323`);}catch(e){}
+  x.font=`${NAME}px VT323,"Courier New",monospace`;
+  if('letterSpacing' in x)x.letterSpacing='1px';
+  x.fillStyle=v('--text');x.textAlign='center';x.textBaseline='middle';
+  x.fillText(si.name,W/2,PAD+MARK+(H-PAD-MARK)/2);
+  return canvasPng(c);
+}
+function saveBlob(blob,name){
+  const u=URL.createObjectURL(blob),l=document.createElement('a');
+  l.href=u;l.download=name;document.body.appendChild(l);l.click();l.remove();
+  setTimeout(()=>URL.revokeObjectURL(u),2000);
+}
+// Copy hands the clipboard a promise of the PNG, so the write starts inside
+// the click (Safari requires it) while the image is still being drawn. Where
+// images cannot be put on the clipboard, Copy saves the file instead.
+function copyOrSavePng(btn,make,name,save){
+  const canCopy=window.ClipboardItem&&navigator.clipboard&&navigator.clipboard.write;
+  if(!save&&canCopy){
+    navigator.clipboard.write([new ClipboardItem({'image/png':make()})])
+      .then(()=>flashBtn(btn,'Copied'),e=>{console.warn('[copy image]',e);flashBtn(btn,'Failed');});
+    return;
+  }
+  make().then(b=>{saveBlob(b,name);flashBtn(btn,'Saved');}).catch(e=>{console.warn('[save image]',e);flashBtn(btn,'Failed');});
+}
+document.getElementById('pg-address').addEventListener('click',e=>{
+  const btn=e.target.closest('.imgbtn');if(!btn)return;
+  const a=btn.closest('.addr-imgs').dataset.a,act=btn.dataset.act,save=/-save$/.test(act);
+  if(/^qr-/.test(act))copyOrSavePng(btn,()=>qrPng(a),a+'-qr.png',save);
+  else if(/^si-/.test(act))copyOrSavePng(btn,()=>stealthMarkPng(a),a+'-stealthicon.png',save);
+  else if(/^card-/.test(act))copyOrSavePng(btn,()=>stealthCardPng(a),a+'-stealthicon-card.png',save);
+});
 async function renderCardPage(p){const tk=(p||'').toUpperCase();const c=DECK.find(x=>x.tk===tk);
   const el=document.getElementById('pg-card');
   if(!c){el.innerHTML=`<div class="pagehead">${crumb([['Explorer','#/'],['The Deck','#/'],['Card',null]])}</div><h1 class="ptitle"><span class="ttx">Card not found</span></h1><div class="sec"><div class="empty">No card with ticker "${esc(tk)}". The deck holds 53 cards (e.g. DAS, DKH, DJK).</div></div>`;return;}
@@ -1065,11 +1207,11 @@ async function renderMovement(p){const parts=(p||'').split('/').filter(Boolean);
     if(!big)return '';
     const cc=big.currency||'BRK';
     let from=null;(t.vin||[]).forEach(v=>{if(v.currency===cc&&v.address)from=v.address;});
-    return `<tr><td class="dim" data-label="Timestamp">${t.timestamp?tsReal(t.timestamp):'—'}</td><td data-label="Tx hash">${aTxLive(t.txid,cc)}</td><td data-label="From">${from&&!/coinbase/i.test(from)?aAddrLive(from):'<span class="dim">'+(from?'mint':'—')+'</span>'}</td><td data-label="To">${aAddrLive(big.address)}</td><td data-label="Amount">${amtCur(Number(big.amount)/1e8,cc)}</td></tr>`;
+    return `<tr><td class="dim" data-label="Timestamp">${t.timestamp?tsReal(t.timestamp):'—'}</td><td data-label="Tx ID">${aTxLive(t.txid,cc)}</td><td data-label="From">${from&&!/coinbase/i.test(from)?aAddrLive(from):'<span class="dim">'+(from?'mint':'—')+'</span>'}</td><td data-label="To">${aAddrLive(big.address)}</td><td data-label="Amount">${amtCur(Number(big.amount)/1e8,cc)}</td></tr>`;
   }).join(''):`<tr><td colspan="5"><div class="empty">No transfers over ${thCoins.toLocaleString()} on this page.</div></td></tr>`;
   el.innerHTML=head+`
     <div class="sec"><div class="h">${ccyFilterBar(ccy,'#/movement/',false)}<span class="label">large transfers · over ${thCoins.toLocaleString()} · ${grpInt(total)} total</span></div>
-      <table class="stack"><thead><tr><th>Timestamp</th><th>Tx hash</th><th>From</th><th>To</th><th>Amount</th></tr></thead><tbody>${rows}</tbody></table>
+      <table class="stack"><thead><tr><th>Timestamp</th><th>Tx ID</th><th>From</th><th>To</th><th>Amount</th></tr></thead><tbody>${rows}</tbody></table>
       ${pager(pg,pages,'#/movement/'+ccy+'/')}
     </div>`;
   if(window.__decode)window.__decode(el);
@@ -1150,17 +1292,47 @@ function grpDiff(n){n=Number(n);if(!isFinite(n))return '—';const dp=Math.abs(n
 function tsReal(sec){const d=new Date(Number(sec)*1000);if(isNaN(d.getTime()))return '—';const p=n=>String(n).padStart(2,'0');return `${d.getUTCDate()} ${MON[d.getUTCMonth()]} ${d.getUTCFullYear()} ${p(d.getUTCHours())}:${p(d.getUTCMinutes())}`;}
 const encU=encodeURIComponent;
 const aTxLive=(h,c)=>`<a class="hash" href="#/tx/${c?c+'/':''}${encU(h)}" title="${esc(h)}">${esc(h.length>22?h.slice(0,20)+'…':h)}</a>`;
-const aAddrLive=a=>`<a class="hash" href="#/address/${encU(a)}" title="${esc(a)}">${esc(a.length>18?a.slice(0,11)+'…'+a.slice(-4):a)}</a>`;
+const aAddrLive=(a,cls)=>`<a class="${cls||'hash'}" href="#/address/${encU(a)}" title="${esc(a)}">${esc(a.length>18?a.slice(0,11)+'…'+a.slice(-4):a)}</a>`;
 const COINLOGO={BRK:'brk-coin.png',BRX:'brx-coin.png',SIS:'sis-coin.png'};
 function coinToshis(tx,coin){if(tx.totals&&tx.totals.length){const f=tx.totals.find(t=>t[0]===coin);if(f)return Number(f[1]);}return Number(tx.total)||0;}
 function txHasCoin(tx,coin){if(tx.totals&&tx.totals.length)return tx.totals.some(x=>x[0]===coin);return (tx.vout||[]).some(v=>v.currency===coin);}
 let _homeReq=0,_homeCoin='BRK',_lastTxs=[],_lastBlocks=[],_chainTip=null;
 async function chainTip(){if(_chainTip!=null)return _chainTip;const s=await fetchJSON('/ext/summary');_chainTip=(s&&s.data&&s.data[0]&&s.data[0].blockcount)||null;return _chainTip;}
 const HOMECOUNT={blocks:10,txs:10};       // rows shown per panel (10/25/50/100 switcher)
-function hashCell(h){
+// How long ago a unix-seconds timestamp was: "12 seconds", "3 hours", or with
+// short units ("2 min") where space is tight.
+function ageText(sec,short){
+  const s=Math.max(0,Math.floor(Date.now()/1000-Number(sec)));
+  const units=short?[[86400,'day','days'],[3600,'hr','hr'],[60,'min','min'],[1,'sec','sec']]
+                   :[[86400,'day','days'],[3600,'hour','hours'],[60,'minute','minutes'],[1,'second','seconds']];
+  for(const [d,one,many] of units){if(s>=d||d===1){const n=Math.floor(s/d);return n+' '+(n===1?one:many);}}
+}
+// An age that keeps itself current; tickAges rewrites every one on the page.
+const ageSpan=(ts,short)=>ts?`<span data-age="${short?'short':'long'}" data-ts="${ts}">${ageText(ts,short)}</span>`:'<span class="dim">—</span>';
+function tickAges(){document.querySelectorAll('[data-age]').forEach(x=>{x.textContent=ageText(x.dataset.ts,x.dataset.age==='short');});}
+setInterval(tickAges,5000);
+// Block ID, coloured by proof type like the Type badge, linking to the block.
+function bidCell(b){
+  const h=b.blockhash;
   if(!h) return '<span class="dim">—</span>';
-  const shortened=h.slice(0,6)+'…'+h.slice(-4);
-  return `<span class="bhash" title="${esc(h)}"><span class="mono">${shortened}</span>${copyBtn(h)}</span>`;
+  return `<span class="bhash" title="${esc(h)}"><a class="bid mono ${b.stake?'pos':'pow'}" href="#/block/${b.height}">${h.slice(0,6)}…${h.slice(-4)}</a>${copyBtn(h)}</span>`;
+}
+// The block tables on the Explorer and Blocks tabs share one layout; the
+// Explorer shows each block's age, the Blocks tab its time.
+function blockHead(age){
+  return `<tr><th>Height</th><th>${age?'Age':'Time'}</th><th class="c-type">Type</th><th class="c-bid">Block ID</th><th>Txns</th><th>Reward</th><th>Forged by</th></tr>`;
+}
+function blockRow(b,age){
+  return `<tr>`
+    +`<td data-label="Height"><a class="plain" href="#/block/${b.height}">${b.height}</a></td>`
+    +(age?`<td data-label="Age">${ageSpan(b.timestamp)}</td>`
+         :`<td data-label="Time">${b.timestamp?tsReal(b.timestamp):'—'}</td>`)
+    +`<td class="c-type" data-label="Type"><span class="btype ${b.stake?'pos':'pow'}">${b.stake?'PoS':'PoW'}</span></td>`
+    +`<td class="c-bid" data-label="Block ID">${bidCell(b)}</td>`
+    +`<td data-label="Txns">${b.txns!=null?b.txns:'—'}</td>`
+    +`<td data-label="Reward">${rewardCell(b)}</td>`
+    +`<td data-label="Forged by">${b.forger?`<span class="bhash">${aAddrLive(b.forger,'plain')}${copyBtn(b.forger)}</span>`:'<span class="dim">—</span>'}</td>`
+    +`</tr>`;
 }
 // Reward: the block's mint, with its currency badge, to 4 decimals. On a PoW
 // block that is the mining reward, on PoS the stake's new coin.
@@ -1172,17 +1344,22 @@ function renderBlockRows(){
   const el=document.getElementById('blockbody');if(!el)return;
   const bl=_lastBlocks.slice(0,HOMECOUNT.blocks);
   el.innerHTML=bl.length
-    ?bl.map(b=>`<tr>`
-      +`<td data-label="Block">${aBlock(b.height)}</td>`
-      +`<td class="dim" data-label="Time">${tsReal(b.timestamp)}</td>`
-      +`<td data-label="Type"><span class="btype ${b.stake?'pos':'pow'}">${b.stake?'PoS':'PoW'}</span></td>`
-      +`<td data-label="Reward">${rewardCell(b)}</td>`
-      +`<td data-label="Hash">${hashCell(b.blockhash)}</td>`
-      +`<td data-label="Txns">${b.txns}</td>`
-      +`<td data-label="Forged by">${b.forger?aAddrLive(b.forger):'<span class="dim">—</span>'}</td>`
-      +`</tr>`).join('')
+    ?bl.map(b=>blockRow(b,true)).join('')
     :`<tr><td colspan="7"><div class="empty">Loading…</div></td></tr>`;
 }
+// Status bar: the chain tip's height and how long ago it was forged.
+function setStatusTip(height,ts){
+  const hb=document.getElementById('sbBlock'),ab=document.getElementById('sbAge');
+  if(hb&&height!=null)hb.textContent=Number(height).toLocaleString('en-US');
+  if(ab)ab.innerHTML=ts?`(${ageSpan(ts,true)})`:'';
+}
+// Keep the tip current on every page, or its age would climb past the next block.
+async function refreshTip(){
+  const r=await fetchJSON('/ext/getlastblocks/1');
+  const b=r&&r.data&&r.data[0];
+  if(b){_chainTip=b.height;setStatusTip(b.height,b.timestamp);}
+}
+setInterval(refreshTip,60000);
 
 async function applyLiveHome(coin){
   _homeCoin=coin;
@@ -1195,8 +1372,10 @@ async function applyLiveHome(coin){
   ]);
   if(my!==_homeReq)return;                 // superseded by a newer coin switch
   const s=(sum&&sum.data&&sum.data[0])||{};
-  // live status bar — node chain tip
-  if(s.blockcount){_chainTip=s.blockcount;const el=document.getElementById('sbBlock');if(el)el.textContent='Block '+Number(s.blockcount).toLocaleString('en-US');}
+  // live status bar — the newest block read, else the node's bare height
+  const tipBlk=lbl&&lbl.data&&lbl.data[0];
+  if(tipBlk){_chainTip=tipBlk.height;setStatusTip(tipBlk.height,tipBlk.timestamp);}
+  else if(s.blockcount){_chainTip=s.blockcount;setStatusTip(s.blockcount,null);}
   const C=COIN[coin]||{color:CCCOLOR[coin]||'var(--text)'};
   // stat strip — per-coin (matches the design). Chain-derived values are live;
   // per-coin metrics we cannot derive show "—"; protocol facts are static.
@@ -1249,6 +1428,11 @@ document.querySelector('.topsearch').addEventListener('submit',e=>{e.preventDefa
   else if(/^\d+$/.test(q))location.hash='#/block/'+q;
   else location.hash='#/search/'+encodeURIComponent(q);
 });
+/* height of the frozen top bar, for things that stick beneath it */
+(function(){const t=document.querySelector('.topfix');if(!t)return;
+  const set=()=>document.documentElement.style.setProperty('--topfix-h',t.offsetHeight+'px');
+  set();if(window.ResizeObserver)new ResizeObserver(set).observe(t);
+})();
 /* mobile hamburger menu */
 (function(){const t=document.querySelector('.navtoggle'),n=document.querySelector('nav.top');if(!t||!n)return;
   const close=()=>{document.body.classList.remove('nav-open');t.setAttribute('aria-expanded','false');};

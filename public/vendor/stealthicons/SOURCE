@@ -1,0 +1,7 @@
+stealthicons.js and LICENSE are copied unmodified from lib/stealthicons.js
+and LICENSE of
+
+  https://github.com/Stealth-R-D-LLC/Stealthicons
+  commit b5eac9d2dc779f6521128feb8a4bbc9e1cad97bb (2026-08-19)
+
+The address page loads it on demand to draw each address's Stealthicon.
