@@ -1,167 +1,149 @@
-Iquidus Explorer - 1.6.1
-================
+Breakout Explorer
+=================
 
-An open source block explorer written in node.js.
+The block explorer for [Breakout Chain](https://breakoutcoin.com/): blocks,
+transactions, addresses, rich lists and large transfers for its three
+currencies (BRK, BRX and SIS), and The Deck, a set of 53 playing-card NFTs.
 
-### See it in action
+It runs at **https://explorer.breakoutchain.com**.
 
-*  [Jumbucks](http://explorer.getjumbucks.com)
-*  [Sphere](http://sphere.iquidus.io)
-*  [SAR](http://explorer.sarcoin.info)
-*  [Vanillacoin](https://blockchain.vanillacoin.net/)
-*  [Neoscoin](http://explorer.infernopool.com/)  
-*  [C2Chain](http://c2chain.info/)
+Breakout Explorer began as a fork of
+[Iquidus Explorer](https://github.com/iquidus/explorer) 1.6.1, and still has
+its directory layout, but has since moved well away from it. It keeps no
+database. Every figure on every page comes from a Breakout node at the moment
+the page is requested, so the explorer can never lag or disagree with the chain.
 
-*note: If you would like your instance mentioned here contact me*
+### Related services
 
-### Requires
+* [explore.brk.zone](https://explore.brk.zone) and
+  [api.brk.zone](https://api.brk.zone) run
+  [Breakout-Explore-CORS](https://github.com/BreakoutCoin/Breakout-Explore-CORS),
+  a public, browser-friendly proxy over the same Breakout Explore API. The
+  first is the primary host and the second a live backup. Each follows the chain
+  with its own node, independently of this explorer, which makes them useful
+  for cross-checking it.
+* [Breakout-Chain-Client](https://github.com/BreakoutCoin/Breakout-Chain-Client)
+  is the node, `breakoutd`, that this explorer reads from.
 
-*  node.js >= 0.10.28
-*  mongodb 2.6.x
-*  *coind
+Requirements
+------------
 
-### Create database
+* **`breakoutd` with the Explore API enabled.** Put `exploreapi=1` in
+  `breakout.conf` and let the node build its explore index. Without it the
+  node still answers core RPC, so blocks and transactions work, but addresses,
+  rich lists, movement and The Deck come back empty. The node must be recent
+  enough to provide `getbestblock`, `getcardinfo` and `getmovementspg`.
+* **Node.js older than 12.** The explorer uses Express 4.2, which reads a
+  response property that Node 12 removed. On a newer Node the page still loads,
+  but every JSON endpoint crashes its worker.
+* **npm 7 or newer**, to install from the version 3 `package-lock.json`.
 
-Enter MongoDB cli:
+No database is needed.
 
-    $ mongo
+Install
+-------
 
-Create databse:
+    git clone https://github.com/BreakoutCoin/Breakout-Explorer.git
+    cd Breakout-Explorer
+    npm ci --omit=dev
 
-    > use explorerdb
+Use `npm ci`, not `npm install`. `npm ci` rebuilds `node_modules` exactly from
+the lock file. `npm install` can leave packages from an older checkout in place.
 
-Create user with read/write access:
+Configure
+---------
 
-    > db.createUser( { user: "iquidus", pwd: "3xp!0reR", roles: [ "readWrite" ] } )
+    cp settings.json.template settings.json
 
-*note: If you're using mongo shell 2.4.x, use the following to create your user:
+`settings.json` is ignored by git, so your credentials stay out of the
+repository. The template is inherited from Iquidus; for Breakout, set at least:
 
-    > db.addUser( { user: "username", pwd: "password", roles: [ "readWrite"] })
+| Setting | Value |
+|---|---|
+| `coin`, `symbol` | `"Breakout"`, `"BRK"` |
+| `wallet` | the node's RPC endpoint: `host`, `port` (50542 by default), and the `rpcuser` / `rpcpassword` from `breakout.conf` |
+| `index.difficulty` | `"Hybrid"`: Breakout has both proof-of-work and proof-of-stake blocks |
+| `genesis_block`, `genesis_tx` | from `breakoutd getblockhash 0` and that block's first transaction |
+| `port` | the port the explorer listens on (3001 by default) |
 
-### Get the source
+Settings are read only at startup.
 
-    git clone https://github.com/iquidus/explorer explorer
+Run
+---
 
-### Install node modules
-
-    cd explorer && npm install --production
-
-### Configure
-
-    cp ./settings.json.template ./settings.json
-
-*Make required changes in settings.json*
-
-### Start Explorer
-
-    npm start
-
-*note: mongod must be running to start the explorer*
-
-As of version 1.4.0 the explorer defaults to cluster mode, forking an instance of its process to each cpu core. This results in increased performance and stability. Load balancing gets automatically taken care of and any instances that for some reason die, will be restarted automatically. For testing/development (or if you just wish to) a single instance can be launched with
-
-    node --stack-size=10000 bin/instance
-
-To stop the cluster you can use
-
+    npm start      # starts a master process and one worker per CPU
     npm stop
 
-### Syncing databases with the blockchain
+Check that the explorer is healthy:
 
-sync.js (located in scripts/) is used for updating the local databases. This script must be called from the explorers root directory.
+    curl -s localhost:3001/ext/summary
 
-    Usage: node scripts/sync.js [database] [mode]
+A non-zero `addresses` means the Explore API is answering. A current
+`blockcount` means core RPC is.
 
-    database: (required)
-    index [mode] Main index: coin info/stats, transactions & addresses
-    market       Market data: summaries, orderbooks, trade history & chartdata
+In production, run the explorer behind a reverse proxy that handles TLS, and
+under a service manager such as systemd. Stop it with `SIGINT`, because the
+cluster master shuts its workers down only on that signal.
 
-    mode: (required for index database only)
-    update       Updates index from last sync to current block
-    check        checks index for (and adds) any missing transactions/addresses
-    reindex      Clears index then resyncs from genesis to current block
+Using the explorer
+------------------
 
-    notes:
-    * 'current block' is the latest created block when script is executed.
-    * The market database only supports (& defaults to) reindex mode.
-    * If check mode finds missing data(ignoring new data since last sync),
-      index_timeout in settings.json is set too low.
+The site is a single page, `public/thedeck.html`, with hash routes:
 
+    /#/block/{height}
+    /#/tx/{txid}
+    /#/address/{address}
+    /#/card/{ticker}
+    /#/richlist/{BRK|BRX|SIS}
+    /#/movement
+    /#/network
 
-*It is recommended to have this script launched via a cronjob at 1+ min intervals.*
+Links in the old Iquidus form (`/tx/…`, `/address/…`, `/block/{hash}`, and so
+on) redirect to the corresponding page.
 
-**crontab**
+API
+---
 
-*Example crontab; update index every minute and market data every 2 minutes*
+Everything below is read-only JSON, and `/ext/*` allows cross-origin requests.
 
-    */1 * * * * cd /path/to/explorer && /usr/bin/nodejs scripts/sync.js index update > /dev/null 2>&1
-    */2 * * * * cd /path/to/explorer && /usr/bin/nodejs scripts/sync.js market > /dev/null 2>&1
-    */5 * * * * cd /path/to/explorer && /usr/bin/nodejs scripts/peers.js > /dev/null 2>&1
+**`/ext/*`**: endpoints built for the explorer, answered from the node:
 
-### Wallet
+| Endpoint | Returns |
+|---|---|
+| `/ext/summary` | chain-wide summary: height, difficulty, supply, unique addresses, connections |
+| `/ext/getaddress/{address}` | balance, sent, received, currency and recent transactions |
+| `/ext/getbalance/{address}` | balance only |
+| `/ext/gettx/{txid}` | a transaction with currency-tagged inputs and outputs, and its fee |
+| `/ext/getblock/{height}` | a block with its transactions |
+| `/ext/getlastblocks/{count}`, `/ext/getblockpage/{page}` | recent blocks |
+| `/ext/getcoinstats/{coin}`, `/ext/getsupply/{coin}` | holder count and supply for a currency |
+| `/ext/getrichlistpg/{coin}/{page}?per={n}` | paged rich list, with ranks and share of supply |
+| `/ext/getcoindist/{coin}`, `/ext/getcoinbuckets/{coin}` | distribution by holder tier and by balance |
+| `/ext/getmovement/{all\|BRK\|BRX\|SIS}/{page}` | large transfers |
+| `/ext/getdeck`, `/ext/getcard/{ticker}`, `/ext/getcardtxs/{count}` | The Deck: holders, custody history and recent card transfers |
+| `/ext/connections` | the node's current peers |
 
-Iquidus Explorer is intended to be generic so it can be used with any wallet following the usual standards. The wallet must be running with atleast the following flags
+**`/api/{method}`**: a pass-through to a fixed list of read-only node RPC
+methods (for example `getblockcount`, `getblock`, `getrawtransaction`,
+`getaddressinfo` and `getrichlist`). Anything not on that list is refused. The
+list is in `app.js`. Query parameters are passed to the node **by position**,
+in the order they appear in the URL, so `getrichlist` needs
+`?color=57&start=1&max=100` in exactly that order.
 
-    -daemon -txindex
+A currency's colour is its index in the Breakout protocol: BRX is 1, BRK 2,
+SIS 57, and the Deck cards 4–56. See `lib/currencies.js`.
 
-### Donate
+Credits and licences
+--------------------
 
-    BTC: 168hdKA3fkccPtkxnX8hBrsxNubvk4udJi
-    JBS: JZp9893FMmrm1681bDuJBU7c6w11kyEY7D
-
-### Known Issues
-
-**script is already running.**
-
-If you receive this message when launching the sync script either a) a sync is currently in progress, or b) a previous sync was killed before it completed. If you are certian a sync is not in progress remove the index.pid from the tmp folder in the explorer root directory.
-
-    rm tmp/index.pid
-
-**exceeding stack size**
-
-    RangeError: Maximum call stack size exceeded
-
-Nodes default stack size may be too small to index addresses with many tx's. If you experience the above error while running sync.js the stack size needs to be increased.
-
-To determine the default setting run
-
-    node --v8-options | grep -B0 -A1 stack_size
-
-To run sync.js with a larger stack size launch with
-
-    node --stack-size=[SIZE] scripts/sync.js index update
-
-Where [SIZE] is an integer higher than the default.
-
-*note: SIZE will depend on which blockchain you are using, you may need to play around a bit to find an optimal setting*
-
-### License
-
-Copyright (c) 2015, Iquidus Technology  
-Copyright (c) 2015, Luke Williams  
-All rights reserved.
-
-Redistribution and use in source and binary forms, with or without
-modification, are permitted provided that the following conditions are met:
-
-* Redistributions of source code must retain the above copyright notice, this
-  list of conditions and the following disclaimer.
-
-* Redistributions in binary form must reproduce the above copyright notice,
-  this list of conditions and the following disclaimer in the documentation
-  and/or other materials provided with the distribution.
-
-* Neither the name of Iquidus Technology nor the names of its
-  contributors may be used to endorse or promote products derived from
-  this software without specific prior written permission.
-
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
-FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
-SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
-CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
-OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+* Breakout Explorer is a fork of Iquidus Explorer, © 2015 Iquidus Technology
+  and Luke Williams, and keeps its BSD 3-clause licence: see `LICENSE`.
+* The playing-card faces are from Byron Knoll's Vector Playing Cards, which he
+  released into the public domain: see `public/images/cards/SOURCE`.
+* The fonts are JetBrains Mono, Silkscreen and VT323, all under the SIL Open
+  Font License 1.1: see `public/fonts/`.
+* Address icons are drawn with
+  [Stealthicons](https://stealthicons.stealth.org/): see
+  `public/vendor/stealthicons/`.
+* jqPlot and the Bootswatch themes are included with their own licences, under
+  `public/vendor/` and `public/themes/`.
